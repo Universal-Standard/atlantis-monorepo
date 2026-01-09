@@ -86,11 +86,11 @@ jobs:
           echo "Checking for common issues..."
           
           # Check for trailing whitespace
-          if git diff origin/main --check ; then
-            echo "No trailing whitespace found"
-          else
+          if ! git diff origin/main --check ; then
             echo "Trailing whitespace found"
             ISSUES_FOUND=$((ISSUES_FOUND + 1))
+          else
+            echo "No trailing whitespace found"
           fi
           
           # Check for large files
@@ -205,6 +205,8 @@ jobs:
               });
             } catch (error) {
               console.log('Could not create review (may be author):', error.message);
+              // Note: This is expected when the workflow author is the PR author
+              // The PR will still be approved via labels and can be merged
             }
             
             // Add approval label
@@ -315,8 +317,9 @@ jobs:
               pull_number: parseInt(prNumber)
             });
             
-            // Extract issue number from PR body
-            const issueMatch = pr.data.body.match(/#(\d+)/);
+            // Extract issue number from PR body using GitHub closing keywords
+            const prBody = pr.data.body || '';
+            const issueMatch = prBody.match(/\b(?:[Ff]ixes|[Cc]loses|[Rr]esolves)\s+#(\d+)/);
             if (issueMatch) {
               const issueNumber = parseInt(issueMatch[1]);
               
@@ -326,7 +329,7 @@ jobs:
                 repo: context.repo.repo,
                 issue_number: issueNumber,
                 state: 'closed',
-                labels: ['resolved', 'automated']
+                labels: ['automated']
               });
               
               // Add final comment

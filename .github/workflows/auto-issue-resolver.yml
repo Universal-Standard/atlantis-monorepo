@@ -85,11 +85,12 @@ jobs:
             const issueTitle = `${{ steps.issue-details.outputs.issue_title }}`;
             const issueBody = `${{ steps.issue-details.outputs.issue_body }}`;
             
-            // Generate solution based on issue type
+            // Generate solution based on issue type (case-insensitive matching)
             let solution = '';
             let files = [];
+            const titleLower = issueTitle.toLowerCase();
             
-            if (issueTitle.includes('CONTRIBUTING.md')) {
+            if (titleLower.includes('contributing') || titleLower.match(/contribution.*guideline/)) {
               solution = 'Create CONTRIBUTING.md with contribution guidelines';
               files.push({
                 path: 'CONTRIBUTING.md',
@@ -97,7 +98,7 @@ jobs:
               });
             }
             
-            if (issueTitle.includes('LICENSE')) {
+            if (titleLower.includes('license')) {
               solution = 'Create LICENSE file with MIT license';
               files.push({
                 path: 'LICENSE',
@@ -105,7 +106,7 @@ jobs:
               });
             }
             
-            if (issueTitle.includes('.gitignore')) {
+            if (titleLower.includes('gitignore') || titleLower.includes('.gitignore')) {
               solution = 'Create .gitignore file with common patterns';
               files.push({
                 path: '.gitignore',
@@ -113,11 +114,11 @@ jobs:
               });
             }
             
-            if (issueTitle.includes('SECURITY.md')) {
+            if (titleLower.includes('security')) {
               solution = 'Create SECURITY.md with security policy';
               files.push({
                 path: 'SECURITY.md',
-                content: `# Security Policy\n\n## Supported Versions\n\nWe release patches for security vulnerabilities. Currently supported versions:\n\n| Version | Supported          |\n| ------- | ------------------ |\n| latest  | :white_check_mark: |\n\n## Reporting a Vulnerability\n\nIf you discover a security vulnerability, please send an e-mail to security@atlantis-ai.com.\n\nAll security vulnerabilities will be promptly addressed.\n\nPlease include:\n- Description of the vulnerability\n- Steps to reproduce\n- Potential impact\n- Suggested fix (if any)\n\n## Automated Security\n\nThis repository uses:\n- CodeQL for automated security scanning\n- Dependabot for dependency updates\n- Automated security issue detection and resolution\n\nThank you for helping keep ATLANTIS AI secure!\n`
+                content: `# Security Policy\n\n## Supported Versions\n\nWe release patches for security vulnerabilities. Currently supported versions:\n\n| Version | Supported          |\n| ------- | ------------------ |\n| latest  | :white_check_mark: |\n\n## Reporting a Vulnerability\n\nIf you discover a security vulnerability, please use GitHub's "Security" tab to report it privately, or contact the repository maintainers.\n\n**Important:** Replace this section with a real security contact method for your organization.\n\nAll security vulnerabilities will be promptly addressed.\n\nPlease include:\n- Description of the vulnerability\n- Steps to reproduce\n- Potential impact\n- Suggested fix (if any)\n\n## Automated Security\n\nThis repository uses:\n- CodeQL for automated security scanning\n- Dependabot for dependency updates\n- Automated security issue detection and resolution\n\nThank you for helping keep ATLANTIS AI secure!\n`
               });
             }
             
@@ -196,7 +197,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.data.number,
-              labels: ['automated-fix', 'auto-merge']
+              labels: ['automated-fix']
             });
             
             core.setOutput('pr_number', pr.data.number);

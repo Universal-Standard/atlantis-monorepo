@@ -14,28 +14,28 @@ updates:
       prefix: "chore"
       include: "scope"
 
-  # npm dependencies (if/when added)
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    labels:
-      - "dependencies"
-      - "automated"
-      - "auto-merge"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
+  # npm dependencies - uncomment when package.json is added
+  # - package-ecosystem: "npm"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #   labels:
+  #     - "dependencies"
+  #     - "automated"
+  #     - "auto-merge"
+  #   commit-message:
+  #     prefix: "chore"
+  #     include: "scope"
 
-  # Python dependencies (if/when added)
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    labels:
-      - "dependencies"
-      - "automated"
-      - "auto-merge"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
+  # Python dependencies - uncomment when requirements.txt is added
+  # - package-ecosystem: "pip"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #   labels:
+  #     - "dependencies"
+  #     - "automated"
+  #     - "auto-merge"
+  #   commit-message:
+  #     prefix: "chore"
+  #     include: "scope"

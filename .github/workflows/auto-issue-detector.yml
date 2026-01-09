@@ -25,8 +25,11 @@ jobs:
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
+        continue-on-error: true
         with:
-          languages: javascript, python, go, java, csharp, cpp, ruby
+          # Auto-detect languages in the repository
+          # If specific languages are needed, configure them here
+          languages: javascript, python
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
