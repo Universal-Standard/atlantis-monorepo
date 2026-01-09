@@ -334,15 +334,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issueNumber,
-                body: `✅ **Issue Resolved and Merged**
-
-This issue has been automatically resolved and merged to main.
-
-- PR #${prNumber} merged successfully
-- Changes are now live in main branch
-- Issue automatically closed
-
-**Automated workflow complete!** 🎉`
+                body: `✅ **Issue Resolved and Merged**\n\nThis issue has been automatically resolved and merged to main.\n\n- PR #${prNumber} merged successfully\n- Changes are now live in main branch\n- Issue automatically closed\n\n**Automated workflow complete!** 🎉`
               });
               
               console.log(`Closed issue #${issueNumber}`);
@@ -409,19 +401,5 @@ This issue has been automatically resolved and merged to main.
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: parseInt(prNumber),
-              body: `🎉 **Successfully Merged and Archived**
-
-**Merge SHA:** \`${{ steps.merge.outputs.merge_sha }}\`
-
-This PR has completed the full automated workflow:
-- ✅ Detected issue
-- ✅ Generated solution  
-- ✅ Applied fix
-- ✅ Automated review
-- ✅ Merged to main
-- ✅ Archived documentation
-- ✅ Closed related issue
-- ✅ Cleaned up branch
-
-**All automated. All self-healing. Mission accomplished!** 🚀`
+              body: `🎉 **Successfully Merged and Archived**\n\n**Merge SHA:** \`${{ steps.merge.outputs.merge_sha }}\`\n\nThis PR has completed the full automated workflow:\n- ✅ Detected issue\n- ✅ Generated solution\n- ✅ Applied fix\n- ✅ Automated review\n- ✅ Merged to main\n- ✅ Archived documentation\n- ✅ Closed related issue\n- ✅ Cleaned up branch\n\n**All automated. All self-healing. Mission accomplished!** 🚀`
             });

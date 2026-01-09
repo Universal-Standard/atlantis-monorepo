@@ -93,43 +93,7 @@ jobs:
               solution = 'Create CONTRIBUTING.md with contribution guidelines';
               files.push({
                 path: 'CONTRIBUTING.md',
-                content: `# Contributing to ATLANTIS Monorepo
-
-## Welcome Contributors!
-
-Thank you for your interest in contributing to the ATLANTIS AI project.
-
-## Getting Started
-
-1. Fork the repository
-2. Clone your fork locally
-3. Create a feature branch
-4. Make your changes
-5. Test your changes
-6. Submit a pull request
-
-## Code Standards
-
-- Follow existing code style and conventions
-- Write clear commit messages
-- Add tests for new features
-- Update documentation as needed
-
-## Pull Request Process
-
-1. Ensure all tests pass
-2. Update the README.md with details of changes if needed
-3. The PR will be reviewed by maintainers
-4. Once approved, it will be merged
-
-## Automated Workflows
-
-This repository uses automated workflows for issue detection, resolution, and merging.
-
-## Code of Conduct
-
-Please be respectful and professional in all interactions.
-`
+                content: `# Contributing to ATLANTIS Monorepo\n\n## Welcome Contributors!\n\nThank you for your interest in contributing to the ATLANTIS AI project.\n\n## Getting Started\n\n1. Fork the repository\n2. Clone your fork locally\n3. Create a feature branch\n4. Make your changes\n5. Test your changes\n6. Submit a pull request\n\n## Code Standards\n\n- Follow existing code style and conventions\n- Write clear commit messages\n- Add tests for new features\n- Update documentation as needed\n\n## Pull Request Process\n\n1. Ensure all tests pass\n2. Update the README.md with details of changes if needed\n3. The PR will be reviewed by maintainers\n4. Once approved, it will be merged\n\n## Automated Workflows\n\nThis repository uses automated workflows for issue detection, resolution, and merging.\n\n## Code of Conduct\n\nPlease be respectful and professional in all interactions.\n`
               });
             }
             
@@ -137,28 +101,7 @@ Please be respectful and professional in all interactions.
               solution = 'Create LICENSE file with MIT license';
               files.push({
                 path: 'LICENSE',
-                content: `MIT License
-
-Copyright (c) 2026 Universal Standard - ATLANTIS AI
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-`
+                content: `MIT License\n\nCopyright (c) 2026 Universal Standard - ATLANTIS AI\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the "Software"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n`
               });
             }
             
@@ -166,51 +109,7 @@ SOFTWARE.
               solution = 'Create .gitignore file with common patterns';
               files.push({
                 path: '.gitignore',
-                content: `# Dependencies
-node_modules/
-vendor/
-*.egg-info/
-__pycache__/
-*.pyc
-
-# Build outputs
-dist/
-build/
-*.o
-*.so
-*.exe
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-logs/
-
-# Environment
-.env
-.env.local
-*.key
-*.pem
-
-# Test coverage
-coverage/
-*.coverage
-.nyc_output/
-
-# Temporary
-tmp/
-temp/
-*.tmp
-`
+                content: `# Dependencies\nnode_modules/\nvendor/\n*.egg-info/\n__pycache__/\n*.pyc\n\n# Build outputs\ndist/\nbuild/\n*.o\n*.so\n*.exe\n\n# IDE\n.vscode/\n.idea/\n*.swp\n*.swo\n*~\n\n# OS\n.DS_Store\nThumbs.db\n\n# Logs\n*.log\nlogs/\n\n# Environment\n.env\n.env.local\n*.key\n*.pem\n\n# Test coverage\ncoverage/\n*.coverage\n.nyc_output/\n\n# Temporary\ntmp/\ntemp/\n*.tmp\n`
               });
             }
             
@@ -218,37 +117,7 @@ temp/
               solution = 'Create SECURITY.md with security policy';
               files.push({
                 path: 'SECURITY.md',
-                content: `# Security Policy
-
-## Supported Versions
-
-We release patches for security vulnerabilities. Currently supported versions:
-
-| Version | Supported          |
-| ------- | ------------------ |
-| latest  | :white_check_mark: |
-
-## Reporting a Vulnerability
-
-If you discover a security vulnerability, please send an e-mail to security@atlantis-ai.com.
-
-All security vulnerabilities will be promptly addressed.
-
-Please include:
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact
-- Suggested fix (if any)
-
-## Automated Security
-
-This repository uses:
-- CodeQL for automated security scanning
-- Dependabot for dependency updates
-- Automated security issue detection and resolution
-
-Thank you for helping keep ATLANTIS AI secure!
-`
+                content: `# Security Policy\n\n## Supported Versions\n\nWe release patches for security vulnerabilities. Currently supported versions:\n\n| Version | Supported          |\n| ------- | ------------------ |\n| latest  | :white_check_mark: |\n\n## Reporting a Vulnerability\n\nIf you discover a security vulnerability, please send an e-mail to security@atlantis-ai.com.\n\nAll security vulnerabilities will be promptly addressed.\n\nPlease include:\n- Description of the vulnerability\n- Steps to reproduce\n- Potential impact\n- Suggested fix (if any)\n\n## Automated Security\n\nThis repository uses:\n- CodeQL for automated security scanning\n- Dependabot for dependency updates\n- Automated security issue detection and resolution\n\nThank you for helping keep ATLANTIS AI secure!\n`
               });
             }
             
@@ -282,11 +151,7 @@ Thank you for helping keep ATLANTIS AI secure!
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "🤖 Auto-fix: ${{ steps.generate-solution.outputs.solution }}
-
-Automatically resolves issue #${{ steps.issue-details.outputs.issue_number }}
-
-This commit was generated by the automated issue resolution system."
+            git commit -m "🤖 Auto-fix: ${{ steps.generate-solution.outputs.solution }} - Automatically resolves issue #${{ steps.issue-details.outputs.issue_number }}. This commit was generated by the automated issue resolution system."
             
             git push origin "$BRANCH_NAME"
           fi
@@ -321,26 +186,7 @@ This commit was generated by the automated issue resolution system."
               title: `🤖 Auto-fix: ${solution}`,
               head: branchName,
               base: 'main',
-              body: `## Automated Fix
-
-This PR was automatically generated to resolve issue #${issueNumber}.
-
-**Solution:** ${solution}
-
-### Changes Made
-- Automated analysis of the issue
-- Generated appropriate solution
-- Applied fix with best practices
-- Ready for automated review and merge
-
-### Automated Workflow
-✅ Issue detected and analyzed
-✅ Solution generated
-✅ Changes applied
-⏳ Awaiting automated review
-⏳ Pending automated merge
-
-Fixes #${issueNumber}`,
+              body: `## Automated Fix\n\nThis PR was automatically generated to resolve issue #${issueNumber}.\n\n**Solution:** ${solution}\n\n### Changes Made\n- Automated analysis of the issue\n- Generated appropriate solution\n- Applied fix with best practices\n- Ready for automated review and merge\n\n### Automated Workflow\n✅ Issue detected and analyzed\n✅ Solution generated\n✅ Changes applied\n⏳ Awaiting automated review\n⏳ Pending automated merge\n\nFixes #${issueNumber}`,
               maintainer_can_modify: true
             });
             
@@ -367,11 +213,7 @@ Fixes #${issueNumber}`,
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issueNumber,
-              body: `✅ **Solution Generated**
-
-A pull request has been automatically created: #${prNumber}
-
-The fix will be automatically reviewed and merged once all checks pass.`
+              body: `✅ **Solution Generated**\n\nA pull request has been automatically created: #${prNumber}\n\nThe fix will be automatically reviewed and merged once all checks pass.`
             });
             
             // Update labels

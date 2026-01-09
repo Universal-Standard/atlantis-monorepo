@@ -110,15 +110,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: `[AUTO] ${issue}`,
-                body: `This issue was automatically detected by the automated issue detection system.
-                
-**Issue Details:**
-${issue}
-
-**Priority:** Medium
-**Auto-generated:** Yes
-
-This issue will be automatically processed through our automated resolution pipeline.`,
+                body: `This issue was automatically detected by the automated issue detection system.\n\n**Issue Details:**\n${issue}\n\n**Priority:** Medium\n**Auto-generated:** Yes\n\nThis issue will be automatically processed through our automated resolution pipeline.`,
                 labels: ['auto-detected', 'needs-review', 'automation']
               });
               

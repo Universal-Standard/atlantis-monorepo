@@ -123,14 +123,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: pr.number,
-                body: `🔧 **Self-Healing Triggered**
-
-This PR has been stuck for ${pr.age_hours} hours. Attempting to resolve...
-
-**Actions taken:**
-- Retriggering automated review
-- Checking merge conflicts
-- Verifying CI status`
+                body: `🔧 **Self-Healing Triggered**\n\nThis PR has been stuck for ${pr.age_hours} hours. Attempting to resolve...\n\n**Actions taken:**\n- Retriggering automated review\n- Checking merge conflicts\n- Verifying CI status`
               });
               
               // Trigger review workflow again
@@ -165,9 +158,7 @@ This PR has been stuck for ${pr.age_hours} hours. Attempting to resolve...
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                body: `🔧 **Self-Healing Triggered**
-
-This issue has been open for ${issue.age_hours} hours without progress. Retriggering automated resolution...`
+                body: `🔧 **Self-Healing Triggered**\n\nThis issue has been open for ${issue.age_hours} hours without progress. Retriggering automated resolution...`
               });
               
               // Retrigger resolution workflow
@@ -203,14 +194,7 @@ This issue has been open for ${issue.age_hours} hours without progress. Retrigge
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   title: '[AUTO] Multiple Workflow Failures Detected',
-                  body: `## Self-Healing Alert
-
-Multiple workflow failures have been detected in the last 24 hours.
-
-**Failed Workflows:**
-${issues.workflow_failures.map(f => `- ${f.name} (${f.conclusion})`).join('\n')}
-
-The self-healing system will attempt to recover, but manual review may be needed.`,
+                  body: `## Self-Healing Alert\n\nMultiple workflow failures have been detected in the last 24 hours.\n\n**Failed Workflows:**\n${issues.workflow_failures.map(f => `- ${f.name} (${f.conclusion})`).join('\n')}\n\nThe self-healing system will attempt to recover, but manual review may be needed.`,
                   labels: ['auto-detected', 'system-health', 'high-priority']
                 });
               }
