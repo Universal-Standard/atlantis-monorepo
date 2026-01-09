@@ -319,7 +319,7 @@ jobs:
             
             // Extract issue number from PR body using GitHub closing keywords
             const prBody = pr.data.body || '';
-            const issueMatch = prBody.match(/\b(?:[Ff]ixes|[Cc]loses|[Rr]esolves)\s+#(\d+)/);
+            const issueMatch = prBody.match(/\b(?:fixes|closes|resolves)\s+#(\d+)/i);
             if (issueMatch) {
               const issueNumber = parseInt(issueMatch[1]);
               

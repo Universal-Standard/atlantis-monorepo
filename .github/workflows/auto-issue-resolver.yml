@@ -85,12 +85,13 @@ jobs:
             const issueTitle = `${{ steps.issue-details.outputs.issue_title }}`;
             const issueBody = `${{ steps.issue-details.outputs.issue_body }}`;
             
-            // Generate solution based on issue type (case-insensitive matching)
+            // Generate solution based on issue type (case-insensitive regex matching)
             let solution = '';
             let files = [];
             const titleLower = issueTitle.toLowerCase();
             
-            if (titleLower.includes('contributing') || titleLower.match(/contribution.*guideline/)) {
+            // Use consistent regex patterns for matching
+            if (titleLower.match(/contribut(ing|ion|e)/)) {
               solution = 'Create CONTRIBUTING.md with contribution guidelines';
               files.push({
                 path: 'CONTRIBUTING.md',
@@ -98,7 +99,7 @@ jobs:
               });
             }
             
-            if (titleLower.includes('license')) {
+            if (titleLower.match(/licen[cs]e/)) {
               solution = 'Create LICENSE file with MIT license';
               files.push({
                 path: 'LICENSE',
@@ -106,7 +107,7 @@ jobs:
               });
             }
             
-            if (titleLower.includes('gitignore') || titleLower.includes('.gitignore')) {
+            if (titleLower.match(/\.?gitignore/)) {
               solution = 'Create .gitignore file with common patterns';
               files.push({
                 path: '.gitignore',
@@ -114,7 +115,7 @@ jobs:
               });
             }
             
-            if (titleLower.includes('security')) {
+            if (titleLower.match(/security/)) {
               solution = 'Create SECURITY.md with security policy';
               files.push({
                 path: 'SECURITY.md',
