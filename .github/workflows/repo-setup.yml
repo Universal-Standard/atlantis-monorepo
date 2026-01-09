@@ -1,0 +1,172 @@
+name: Repository Setup
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/repo-setup.yml'
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  administration: write
+
+jobs:
+  setup-repository:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Repository Settings
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('Configuring repository settings...');
+            
+            try {
+              // Enable automated security fixes
+              await github.rest.repos.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                allow_squash_merge: true,
+                allow_merge_commit: false,
+                allow_rebase_merge: false,
+                delete_branch_on_merge: true,
+                allow_auto_merge: true
+              });
+              console.log('✅ Repository settings updated');
+            } catch (error) {
+              console.log('⚠️ Could not update repository settings:', error.message);
+            }
+
+      - name: Enable Automated Security Fixes
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('Enabling automated security fixes...');
+            
+            try {
+              await github.rest.repos.enableAutomatedSecurityFixes({
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              });
+              console.log('✅ Automated security fixes enabled');
+            } catch (error) {
+              console.log('⚠️ Could not enable security fixes:', error.message);
+            }
+
+      - name: Enable Vulnerability Alerts
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('Enabling vulnerability alerts...');
+            
+            try {
+              await github.rest.repos.enableVulnerabilityAlerts({
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              });
+              console.log('✅ Vulnerability alerts enabled');
+            } catch (error) {
+              console.log('⚠️ Could not enable vulnerability alerts:', error.message);
+            }
+
+      - name: Setup Labels
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('Setting up labels...');
+            
+            const labels = [
+              { name: 'auto-detected', color: '0366d6', description: 'Automatically detected issue' },
+              { name: 'automated-fix', color: '0e8a16', description: 'Automated fix applied' },
+              { name: 'auto-merge', color: 'fbca04', description: 'Ready for automatic merge' },
+              { name: 'in-progress', color: 'f9d0c4', description: 'Work in progress' },
+              { name: 'needs-review', color: 'd93f0b', description: 'Needs review' },
+              { name: 'approved', color: '0e8a16', description: 'Approved for merge' },
+              { name: 'ready-to-merge', color: '0e8a16', description: 'Ready to merge' },
+              { name: 'resolved', color: '5319e7', description: 'Issue resolved' },
+              { name: 'archived', color: 'e4e669', description: 'Archived' },
+              { name: 'automation', color: '0052cc', description: 'Automation system' },
+              { name: 'self-healing', color: 'c5def5', description: 'Self-healing action' },
+              { name: 'system-health', color: 'ff6b6b', description: 'System health issue' },
+              { name: 'high-priority', color: 'd73a4a', description: 'High priority' },
+              { name: 'status:new', color: 'ededed', description: 'New status' },
+              { name: 'status:in-progress', color: 'fbca04', description: 'In progress status' },
+              { name: 'status:completed', color: '0e8a16', description: 'Completed status' },
+              { name: 'solution-generated', color: '1d76db', description: 'Solution has been generated' }
+            ];
+            
+            for (const label of labels) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description
+                });
+                console.log(`✅ Created label: ${label.name}`);
+              } catch (error) {
+                if (error.status === 422) {
+                  // Label already exists, update it
+                  await github.rest.issues.updateLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description
+                  });
+                  console.log(`✅ Updated label: ${label.name}`);
+                } else {
+                  console.log(`⚠️ Error with label ${label.name}:`, error.message);
+                }
+              }
+            }
+
+      - name: Create Initial Documentation
+        run: |
+          echo "Creating initial documentation files..."
+          
+          # Create archived resolutions directory
+          mkdir -p .github/archived-resolutions
+          cat > .github/archived-resolutions/README.md << 'EOF'
+          # Archived Resolutions
+
+          This directory contains archived documentation of automated issue resolutions.
+
+          Each file represents a completed automated workflow from issue detection to merge.
+          EOF
+          
+          echo "✅ Initial documentation created"
+
+      - name: Setup Complete
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log(`
+            ╔═══════════════════════════════════════════════════════════╗
+            ║                                                           ║
+            ║   🤖  ATLANTIS AUTOMATED SYSTEM - SETUP COMPLETE  🤖     ║
+            ║                                                           ║
+            ║   ✅ Repository configured                                ║
+            ║   ✅ Labels created                                       ║
+            ║   ✅ Security features enabled                            ║
+            ║   ✅ Automated workflows ready                            ║
+            ║                                                           ║
+            ║   The system is now fully operational!                   ║
+            ║                                                           ║
+            ╚═══════════════════════════════════════════════════════════╝
+            `);

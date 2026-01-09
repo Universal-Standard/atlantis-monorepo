@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🤖 Automated System
+    url: https://github.com/Universal-Standard/atlantis-monorepo/actions
+    about: View automated workflow runs and system status
+  - name: 📖 Documentation
+    url: https://github.com/Universal-Standard/atlantis-monorepo#readme
+    about: Read about the automated workflow system

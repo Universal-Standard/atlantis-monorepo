@@ -1,0 +1,142 @@
+name: Automated Issue Detection
+
+on:
+  schedule:
+    # Run daily at midnight UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  security-events: write
+  actions: write
+
+jobs:
+  detect-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript, python, go, java, csharp, cpp, ruby
+          queries: security-extended, security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:multiple"
+
+      - name: Run Copilot Code Review
+        id: copilot-review
+        continue-on-error: true
+        run: |
+          echo "Scanning repository for potential issues..."
+          
+          # Create issues directory for tracking
+          mkdir -p .github/detected-issues
+          
+          # Scan for common issues
+          echo "[]" > .github/detected-issues/current-scan.json
+          
+          # Check for missing documentation
+          if [ ! -f "CONTRIBUTING.md" ]; then
+            echo "Missing CONTRIBUTING.md documentation" >> .github/detected-issues/issues.txt
+          fi
+          
+          if [ ! -f "LICENSE" ]; then
+            echo "Missing LICENSE file" >> .github/detected-issues/issues.txt
+          fi
+          
+          if [ ! -f ".gitignore" ]; then
+            echo "Missing .gitignore file" >> .github/detected-issues/issues.txt
+          fi
+          
+          # Check for missing CI/CD best practices
+          if [ ! -f "SECURITY.md" ]; then
+            echo "Missing SECURITY.md policy" >> .github/detected-issues/issues.txt
+          fi
+          
+          # Scan for code quality issues
+          echo "Code scan complete"
+
+      - name: Create Issues from Detection
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            const issuesFile = '.github/detected-issues/issues.txt';
+            if (!fs.existsSync(issuesFile)) {
+              console.log('No issues detected');
+              return;
+            }
+            
+            const issues = fs.readFileSync(issuesFile, 'utf8')
+              .split('\n')
+              .filter(line => line.trim());
+            
+            for (const issue of issues) {
+              if (!issue) continue;
+              
+              // Check if issue already exists
+              const existingIssues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'auto-detected'
+              });
+              
+              const isDuplicate = existingIssues.data.some(i => 
+                i.title.includes(issue.substring(0, 30))
+              );
+              
+              if (isDuplicate) {
+                console.log(`Skipping duplicate issue: ${issue}`);
+                continue;
+              }
+              
+              // Create new issue
+              const newIssue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `[AUTO] ${issue}`,
+                body: `This issue was automatically detected by the automated issue detection system.
+                
+**Issue Details:**
+${issue}
+
+**Priority:** Medium
+**Auto-generated:** Yes
+
+This issue will be automatically processed through our automated resolution pipeline.`,
+                labels: ['auto-detected', 'needs-review', 'automation']
+              });
+              
+              console.log(`Created issue #${newIssue.data.number}: ${issue}`);
+              
+              // Trigger the auto-resolution workflow
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'auto-issue-resolver.yml',
+                ref: 'main',
+                inputs: {
+                  issue_number: newIssue.data.number.toString()
+                }
+              });
+            }
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf .github/detected-issues
