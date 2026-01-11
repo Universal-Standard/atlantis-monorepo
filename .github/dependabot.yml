@@ -5,7 +5,7 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "hourly"
+      interval: "daily"
     labels:
       - "dependencies"
       - "automated"

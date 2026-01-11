@@ -80,7 +80,7 @@ jobs:
             return status;
 
       - name: Trigger Issue Detection
-        if: github.event.inputs.force_scan == 'true' || github.event.schedule != ''
+        if: github.event.inputs.force_scan == 'true' || github.event_name == 'schedule'
         uses: actions/github-script@v7
         continue-on-error: true
         with:

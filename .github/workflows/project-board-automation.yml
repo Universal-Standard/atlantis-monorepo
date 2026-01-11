@@ -96,7 +96,7 @@ jobs:
             
             const prBody = context.payload.pull_request.body || '';
             // Use GitHub's standard closing keywords for better accuracy
-            const issueMatch = prBody.match(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+(?:issue\s+)?#(\d+)\b/i);
+            const issueMatch = prBody.match(/\b(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+(?:issue\s+)?#(\d+)\b/i);
             
             if (issueMatch) {
               const issueNumber = parseInt(issueMatch[1]);

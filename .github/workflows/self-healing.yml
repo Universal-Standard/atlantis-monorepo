@@ -187,13 +187,30 @@ jobs:
               
               // Create issue for workflow failures if serious
               if (issues.workflow_failures.length >= 3) {
-                await github.rest.issues.create({
+                const title = '[AUTO] Multiple Workflow Failures Detected';
+                
+                // Check for existing open issues with the same title to avoid duplicates
+                const existingIssues = await github.rest.issues.listForRepo({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  title: '[AUTO] Multiple Workflow Failures Detected',
-                  body: `## Self-Healing Alert\n\nMultiple workflow failures have been detected in the last 24 hours.\n\n**Failed Workflows:**\n${issues.workflow_failures.map(f => `- ${f.name} (${f.conclusion})`).join('\n')}\n\nThe self-healing system will attempt to recover, but manual review may be needed.`,
-                  labels: ['auto-detected', 'system-health', 'high-priority']
+                  state: 'open',
+                  labels: 'auto-detected,system-health,high-priority',
+                  per_page: 100
                 });
+                
+                const duplicate = existingIssues.data.find(issue => issue.title === title);
+                
+                if (duplicate) {
+                  console.log(`An open issue for multiple workflow failures already exists: #${duplicate.number}. Skipping creation.`);
+                } else {
+                  await github.rest.issues.create({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    title,
+                    body: `## Self-Healing Alert\n\nMultiple workflow failures have been detected in the last 24 hours.\n\n**Failed Workflows:**\n${issues.workflow_failures.map(f => `- ${f.name} (${f.conclusion})`).join('\n')}\n\nThe self-healing system will attempt to recover, but manual review may be needed.`,
+                    labels: ['auto-detected', 'system-health', 'high-priority']
+                  });
+                }
               }
             }
 

@@ -24,12 +24,6 @@ jobs:
       github.event_name == 'workflow_dispatch' || 
       contains(github.event.pull_request.labels.*.name, 'automated-fix')
     steps:
-      - name: Checkout PR
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.event.inputs.pr_number }}
-          fetch-depth: 0
-
       - name: Get PR Details
         id: pr-details
         uses: actions/github-script@v7
@@ -47,6 +41,7 @@ jobs:
             core.setOutput('pr_number', prNumber);
             core.setOutput('pr_title', pr.data.title);
             core.setOutput('pr_branch', pr.data.head.ref);
+            core.setOutput('pr_sha', pr.data.head.sha);
             
             // Add review started comment
             await github.rest.issues.createComment({
@@ -55,6 +50,12 @@ jobs:
               issue_number: parseInt(prNumber),
               body: '🔍 **Automated Review Started**\n\nPerforming comprehensive automated review of changes...'
             });
+
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr-details.outputs.pr_sha }}
+          fetch-depth: 0
 
       - name: Setup Review Environment
         run: |
@@ -319,7 +320,7 @@ jobs:
             
             // Extract issue number from PR body using GitHub closing keywords
             const prBody = pr.data.body || '';
-            const issueMatch = prBody.match(/\b(?:fixes|closes|resolves)\s+#(\d+)/i);
+            const issueMatch = prBody.match(/\b(?:fix|fixes|fixed|close|closes|closed|resolve|resolves|resolved)\s+#(\d+)/i);
             if (issueMatch) {
               const issueNumber = parseInt(issueMatch[1]);
               
@@ -328,8 +329,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issueNumber,
-                state: 'closed',
-                labels: ['automated']
+                state: 'closed'
               });
               
               // Add final comment

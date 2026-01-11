@@ -36,8 +36,8 @@ jobs:
         with:
           category: "/language:multiple"
 
-      - name: Run Copilot Code Review
-        id: copilot-review
+      - name: Check for Missing Files
+        id: missing-files-check
         continue-on-error: true
         run: |
           echo "Scanning repository for potential issues..."
@@ -98,8 +98,9 @@ jobs:
                 labels: 'auto-detected'
               });
               
+              const expectedTitle = `[AUTO] ${issue}`;
               const isDuplicate = existingIssues.data.some(i => 
-                i.title.includes(issue.substring(0, 30))
+                i.title === expectedTitle
               );
               
               if (isDuplicate) {
