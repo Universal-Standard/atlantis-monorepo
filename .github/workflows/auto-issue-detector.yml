@@ -28,8 +28,7 @@ jobs:
         continue-on-error: true
         with:
           # Auto-detect languages in the repository
-          # If specific languages are needed, configure them here
-          languages: javascript, python
+          # Will skip if no supported languages are found
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
