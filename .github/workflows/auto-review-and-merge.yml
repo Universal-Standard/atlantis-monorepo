@@ -87,11 +87,11 @@ jobs:
           echo "Checking for common issues..."
           
           # Check for trailing whitespace
-          if ! git diff origin/main --check ; then
+          if git diff origin/main --check ; then
+            echo "No trailing whitespace found"
+          else
             echo "Trailing whitespace found"
             ISSUES_FOUND=$((ISSUES_FOUND + 1))
-          else
-            echo "No trailing whitespace found"
           fi
           
           # Check for large files
@@ -110,10 +110,28 @@ jobs:
           
           SECURITY_ISSUES=0
           
-          # Check for potential secrets
-          if grep -r -i -E "(password|secret|api_key|token)" . --exclude-dir=.git --exclude-dir=node_modules --exclude="*.yml" --exclude="*.md" | grep -q .; then
-            echo "Potential secrets found - reviewing context..."
-            # This is a basic check, would need more sophisticated scanning
+          # Check for potential secrets in changed files with assignment-like patterns
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD || git diff --name-only origin/main || echo "")
+          
+          if [ -n "$CHANGED_FILES" ]; then
+            # Exclude documentation and config template files
+            SECRET_SCAN_FILES=$(echo "$CHANGED_FILES" | grep -Ev '\.(md|markdown|rst|txt|example|sample|template)$' || true)
+          else
+            SECRET_SCAN_FILES=""
+          fi
+          
+          if [ -n "$SECRET_SCAN_FILES" ]; then
+            echo "Scanning changed files for hard-coded secrets with assignment patterns..."
+            # Look for patterns like password="value", api_key = "value", token: "value"
+            if echo "$SECRET_SCAN_FILES" | xargs grep -E '(password|secret|api[_-]?key|token|credentials)\s*[:=]\s*["\047][^"\047[:space:]]{8,}["\047]' 2>/dev/null | grep -v -E '(example|sample|placeholder|your_|xxx|yyy|zzz|\*\*\*|test)' >/tmp/secret_scan_matches; then
+              echo "⚠️ Potential hard-coded secrets detected in the following locations:"
+              cat /tmp/secret_scan_matches
+              SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
+            else
+              echo "✓ No potential hard-coded secrets detected in changed files"
+            fi
+          else
+            echo "No relevant changed files to scan for secrets"
           fi
           
           echo "security_issues=$SECURITY_ISSUES" >> $GITHUB_OUTPUT
@@ -257,11 +275,99 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = ${{ steps.pr-details.outputs.pr_number }};
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
             
-            // Wait a bit for other checks to complete
-            await new Promise(resolve => setTimeout(resolve, 10000));
+            const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
             
-            console.log('Checks wait complete');
+            const maxAttempts = 60; // ~30 minutes with a 30s interval
+            const intervalMs = 30000;
+            
+            function checksIndicateFailure(checkRuns) {
+              if (!checkRuns || checkRuns.length === 0) {
+                return false;
+              }
+              const failingConclusions = ['failure', 'cancelled', 'timed_out', 'action_required', 'stale'];
+              return checkRuns.some((run) => run.conclusion && failingConclusions.includes(run.conclusion));
+            }
+            
+            function allChecksCompleted(checkRuns) {
+              if (!checkRuns || checkRuns.length === 0) {
+                return true; // If no checks, consider them complete
+              }
+              return checkRuns.every((run) => run.status === 'completed');
+            }
+            
+            console.log(`Waiting for checks to complete for PR #${prNumber}...`);
+            
+            let attempt = 0;
+            while (attempt < maxAttempts) {
+              attempt += 1;
+              console.log(`Check polling attempt ${attempt}/${maxAttempts}...`);
+              
+              // Get latest PR data to obtain the current head SHA
+              const { data: pr } = await github.rest.pulls.get({
+                owner,
+                repo,
+                pull_number: prNumber,
+              });
+              
+              const headSha = pr.head && pr.head.sha;
+              if (!headSha) {
+                console.log('Unable to determine head SHA, waiting before retrying...');
+                await delay(intervalMs);
+                continue;
+              }
+              
+              // Combined status for the ref (includes legacy statuses)
+              const combinedStatus = await github.rest.repos.getCombinedStatusForRef({
+                owner,
+                repo,
+                ref: headSha,
+              });
+              
+              const state = combinedStatus.data.state; // success, failure, pending, error
+              console.log(`Combined status for ${headSha}: ${state}`);
+              
+              // Check runs API (more granular)
+              let checkRuns = [];
+              try {
+                const checksResponse = await github.rest.checks.listForRef({
+                  owner,
+                  repo,
+                  ref: headSha,
+                });
+                checkRuns = checksResponse.data.check_runs || [];
+                console.log(`Found ${checkRuns.length} check runs for ${headSha}.`);
+              } catch (e) {
+                console.log(`Checks API not available or error: ${e.message}`);
+              }
+              
+              const hasFailingChecks = checksIndicateFailure(checkRuns) || state === 'failure' || state === 'error';
+              if (hasFailingChecks) {
+                core.setFailed(`One or more required checks have failed for PR #${prNumber}.`);
+                return;
+              }
+              
+              const checksCompleted =
+                (checkRuns.length > 0 && allChecksCompleted(checkRuns) && (state === 'success' || state === 'pending')) ||
+                (checkRuns.length === 0 && (state === 'success' || state === 'pending'));
+              
+              if (checksCompleted) {
+                console.log('✓ All checks have completed successfully. Proceeding to merge step.');
+                return;
+              }
+              
+              if (attempt >= maxAttempts) {
+                core.setFailed(`Timed out waiting for checks to complete for PR #${prNumber}.`);
+                return;
+              }
+              
+              console.log(`Checks not yet complete; waiting ${intervalMs / 1000}s before next poll...`);
+              await delay(intervalMs);
+            }
+            
+            core.setFailed(`Timed out waiting for checks to complete for PR #${prNumber}.`);
 
       - name: Merge Pull Request
         id: merge
@@ -390,7 +496,20 @@ jobs:
           
           EOF
           
-          echo "Archive complete"
+          # Commit archive documentation to repository
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          git add ".github/archived-resolutions/pr-${PR_NUMBER}.md"
+          
+          # Commit only if there are staged changes
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: archive auto-merged PR #${PR_NUMBER}"
+            git push
+            echo "✓ Archive documentation committed and pushed"
+          else
+            echo "No changes to commit for archive documentation"
+          fi
 
       - name: Post-Merge Notification
         if: steps.merge.outputs.merged == 'true'

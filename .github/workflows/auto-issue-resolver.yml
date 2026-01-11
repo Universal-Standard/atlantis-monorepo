@@ -137,14 +137,46 @@ jobs:
           FILES='${{ steps.generate-solution.outputs.files }}'
           
           # Use process substitution instead of pipe to avoid subshell
+          # Validate FILES JSON
+          if [ -z "$FILES" ]; then
+            echo "❌ No files JSON provided in generate-solution output (FILES is empty)." >&2
+            exit 1
+          fi
+          
+          if ! echo "$FILES" | jq -e . >/dev/null 2>&1; then
+            echo "❌ Invalid JSON in FILES variable. Aborting file creation." >&2
+            exit 1
+          fi
+          
+          FILE_COUNT=$(echo "$FILES" | jq 'length')
+          if [ "$FILE_COUNT" -eq 0 ]; then
+            echo "⚠️ FILES JSON is valid but contains no entries. Nothing to create." >&2
+            exit 1
+          fi
+          
+          echo "Creating $FILE_COUNT file(s)..."
+          
+          # Iterate over files with proper error handling
           while IFS= read -r file; do
             FILE_PATH=$(echo "$file" | jq -r '.path')
             FILE_CONTENT=$(echo "$file" | jq -r '.content')
             
-            echo "$FILE_CONTENT" > "$FILE_PATH"
-            git add "$FILE_PATH"
+            if [ -z "$FILE_PATH" ] || [ "$FILE_PATH" = "null" ]; then
+              echo "❌ Encountered file entry with missing or null path. Aborting." >&2
+              exit 1
+            fi
             
-            echo "Created file: $FILE_PATH"
+            # Create parent directory if needed
+            mkdir -p "$(dirname "$FILE_PATH")"
+            
+            # Create/write file and handle errors
+            if ! echo "$FILE_CONTENT" > "$FILE_PATH"; then
+              echo "❌ Failed to create or write file: $FILE_PATH" >&2
+              exit 1
+            fi
+            
+            git add "$FILE_PATH"
+            echo "✓ Created file: $FILE_PATH"
           done < <(echo "$FILES" | jq -c '.[]')
           
           # Commit changes
