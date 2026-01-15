@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Get PR Details
         id: pr-details
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -164,7 +164,7 @@ jobs:
 
       - name: Generate Review Report
         id: review-report
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -202,7 +202,7 @@ jobs:
             return reviewBody;
 
       - name: Post Review Comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -218,7 +218,7 @@ jobs:
 
       - name: Approve PR
         if: steps.review-report.outputs.approved == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -262,7 +262,7 @@ jobs:
 
       - name: Get PR Details
         id: pr-details
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -281,7 +281,7 @@ jobs:
             return pr.data;
 
       - name: Wait for Checks
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -378,7 +378,7 @@ jobs:
 
       - name: Merge Pull Request
         id: merge
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -418,7 +418,7 @@ jobs:
 
       - name: Close Related Issue
         if: steps.merge.outputs.merged == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -458,7 +458,7 @@ jobs:
 
       - name: Cleanup Branch
         if: steps.merge.outputs.merged == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -507,7 +507,7 @@ jobs:
 
       - name: Post-Merge Notification
         if: steps.merge.outputs.merged == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
