@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+vendor/
+*.egg-info/
+__pycache__/
+*.pyc
+
+# Build outputs
+dist/
+build/
+*.o
+*.so
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+*.key
+*.pem
+
+# Test coverage
+coverage/
+*.coverage
+.nyc_output/
+
+# Temporary
+tmp/
+temp/
+*.tmp
