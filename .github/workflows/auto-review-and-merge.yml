@@ -110,10 +110,39 @@ jobs:
           
           SECURITY_ISSUES=0
           
-          # Check for potential secrets
-          if grep -r -i -E "(password|secret|api_key|token)" . --exclude-dir=.git --exclude-dir=node_modules --exclude="*.yml" --exclude="*.md" | grep -q .; then
-            echo "Potential secrets found - reviewing context..."
-            # This is a basic check, would need more sophisticated scanning
+          # Improved secret scanning - check for potential secrets in code files
+          echo "Scanning for potential hard-coded secrets..."
+          
+          # Get changed files only
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || git diff --name-only origin/main 2>/dev/null || echo "")
+          
+          if [ -n "$CHANGED_FILES" ]; then
+            # Filter to code files (exclude common non-code files)
+            CODE_FILES=$(echo "$CHANGED_FILES" | grep -v -E '\.(md|txt|json|yml|yaml|png|jpg|jpeg|gif|svg|ico|pdf)$' || true)
+            
+            if [ -n "$CODE_FILES" ]; then
+              echo "Scanning changed code files for potential secrets..."
+              
+              # Look for assignment patterns that might indicate secrets
+              # Pattern: variable names containing password/secret/key/token followed by assignment with quoted value
+              if echo "$CODE_FILES" | xargs grep -n -E '\b(password|secret|api[_-]?key|token|auth[_-]?token|private[_-]?key)\b\s*[:=]\s*["\047][^"\047\s]{8,}["\047]' 2>/dev/null | grep -q .; then
+                echo "⚠️ Potential hard-coded secrets detected!"
+                echo "$CODE_FILES" | xargs grep -n -E '\b(password|secret|api[_-]?key|token|auth[_-]?token|private[_-]?key)\b\s*[:=]\s*["\047][^"\047\s]{8,}["\047]' 2>/dev/null || true
+                SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
+              else
+                echo "✅ No obvious hard-coded secrets detected in changed code files"
+              fi
+              
+              # Additional check: look for AWS keys, GitHub tokens, etc.
+              if echo "$CODE_FILES" | xargs grep -E 'AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}' 2>/dev/null | grep -q .; then
+                echo "⚠️ Potential API keys or tokens detected (AWS/GitHub patterns)!"
+                SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
+              fi
+            else
+              echo "No code files changed - skipping secret scan"
+            fi
+          else
+            echo "No changed files detected - skipping secret scan"
           fi
           
           echo "security_issues=$SECURITY_ISSUES" >> $GITHUB_OUTPUT
@@ -256,12 +285,96 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const prNumber = ${{ steps.pr-details.outputs.pr_number }};
+            const prNumber = parseInt('${{ steps.pr-details.outputs.pr_number }}', 10);
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
             
-            // Wait a bit for other checks to complete
-            await new Promise(resolve => setTimeout(resolve, 10000));
+            // Get PR details to get the head SHA
+            const { data: pr } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber
+            });
             
-            console.log('Checks wait complete');
+            const headSha = pr.head.sha;
+            console.log(`Polling checks for PR #${prNumber} (SHA: ${headSha})`);
+            
+            // Poll for check completion with timeout
+            const maxAttempts = 60; // 30 minutes with 30s intervals
+            const pollIntervalMs = 30000; // 30 seconds
+            let attempt = 0;
+            
+            while (attempt < maxAttempts) {
+              attempt++;
+              console.log(`Check polling attempt ${attempt}/${maxAttempts}...`);
+              
+              // Get check runs for this commit
+              const { data: checkRuns } = await github.rest.checks.listForRef({
+                owner,
+                repo,
+                ref: headSha,
+                per_page: 100
+              });
+              
+              // Get commit status (older API)
+              const { data: commitStatus } = await github.rest.repos.getCombinedStatusForRef({
+                owner,
+                repo,
+                ref: headSha
+              });
+              
+              const allCheckRuns = checkRuns.check_runs || [];
+              const allStatuses = commitStatus.statuses || [];
+              
+              console.log(`Found ${allCheckRuns.length} check runs, ${allStatuses.length} commit statuses`);
+              
+              // Check if any checks are still pending
+              const pendingCheckRuns = allCheckRuns.filter(run => 
+                run.status !== 'completed'
+              );
+              
+              const pendingStatuses = allStatuses.filter(status =>
+                status.state === 'pending'
+              );
+              
+              console.log(`Pending: ${pendingCheckRuns.length} check runs, ${pendingStatuses.length} statuses`);
+              
+              // Check for failures
+              const failedCheckRuns = allCheckRuns.filter(run =>
+                run.status === 'completed' && 
+                run.conclusion && 
+                ['failure', 'cancelled', 'timed_out', 'action_required'].includes(run.conclusion)
+              );
+              
+              const failedStatuses = allStatuses.filter(status =>
+                ['failure', 'error'].includes(status.state)
+              );
+              
+              if (failedCheckRuns.length > 0 || failedStatuses.length > 0) {
+                console.log('⚠️ Some checks have failed');
+                failedCheckRuns.forEach(run => console.log(`  - ${run.name}: ${run.conclusion}`));
+                failedStatuses.forEach(status => console.log(`  - ${status.context}: ${status.state}`));
+                // Continue anyway - the approval step will handle failures
+              }
+              
+              // If no pending checks, we're done
+              if (pendingCheckRuns.length === 0 && pendingStatuses.length === 0) {
+                console.log('✅ All checks completed');
+                break;
+              }
+              
+              // Wait before next poll
+              if (attempt < maxAttempts) {
+                console.log(`Waiting ${pollIntervalMs/1000}s before next check...`);
+                await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+              }
+            }
+            
+            if (attempt >= maxAttempts) {
+              console.log('⏱️ Timeout reached - proceeding with current check status');
+            }
+            
+            console.log('Check polling complete');
 
       - name: Merge Pull Request
         id: merge

@@ -96,22 +96,62 @@ jobs:
             }
 
       - name: Generate CHANGELOG Entry
-        run: |
-          echo "Generating CHANGELOG entry..."
-          
-          # Create or update CHANGELOG
-          if [ ! -f "CHANGELOG.md" ]; then
-            cat > CHANGELOG.md << 'EOF'
-          # Changelog
-
-          All notable changes to this project will be documented in this file.
-
-          The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-          and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-          ## [Unreleased]
-
-          EOF
-          fi
-          
-          echo "CHANGELOG ready"
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request?.number;
+            const prTitle = context.payload.pull_request?.title || 'Changes';
+            const prBody = context.payload.pull_request?.body || '';
+            
+            console.log('Generating CHANGELOG entry...');
+            
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Create CHANGELOG if it doesn't exist
+            const changelogPath = 'CHANGELOG.md';
+            let changelogContent = '';
+            
+            if (!fs.existsSync(changelogPath)) {
+              changelogContent = '# Changelog\n\n' +
+                'All notable changes to this project will be documented in this file.\n\n' +
+                'The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),\n' +
+                'and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n\n' +
+                '## [Unreleased]\n\n';
+            } else {
+              changelogContent = fs.readFileSync(changelogPath, 'utf8');
+            }
+            
+            // Extract PR changes from body or title
+            const date = new Date().toISOString().split('T')[0];
+            let changeType = '### Changed';
+            
+            // Determine change type from PR title
+            if (prTitle.match(/^feat/i)) {
+              changeType = '### Added';
+            } else if (prTitle.match(/^fix/i)) {
+              changeType = '### Fixed';
+            } else if (prTitle.match(/^docs/i)) {
+              changeType = '### Documentation';
+            } else if (prTitle.match(/^refactor/i)) {
+              changeType = '### Changed';
+            }
+            
+            // Create new entry
+            const newEntry = `\n${changeType}\n- ${prTitle}${prNumber ? ` (#${prNumber})` : ''} - ${date}\n`;
+            
+            // Insert after [Unreleased] header
+            const unreleasedIndex = changelogContent.indexOf('## [Unreleased]');
+            if (unreleasedIndex !== -1) {
+              const insertPoint = changelogContent.indexOf('\n', unreleasedIndex) + 1;
+              changelogContent = changelogContent.slice(0, insertPoint) + newEntry + changelogContent.slice(insertPoint);
+            } else {
+              // Append to end if no Unreleased section
+              changelogContent += newEntry;
+            }
+            
+            // Write back
+            fs.writeFileSync(changelogPath, changelogContent);
+            console.log('CHANGELOG.md updated with new entry');
+            console.log('Entry:', newEntry);
