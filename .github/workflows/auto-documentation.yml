@@ -1,0 +1,157 @@
+name: Auto Documentation
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to document'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Analyze Changes
+        id: analyze
+        run: |
+          echo "Analyzing changes for documentation needs..."
+          
+          # Get list of changed files
+          git fetch origin main
+          CHANGED_FILES=$(git diff --name-only origin/main)
+          
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Generate Documentation
+        id: generate-docs
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const changedFiles = `${{ steps.analyze.outputs.changed_files }}`.split('\n').filter(f => f.trim());
+            
+            let documentation = '# Automated Documentation\n\n';
+            documentation += '## Changes Summary\n\n';
+            documentation += `This PR includes changes to ${changedFiles.length} file(s):\n\n`;
+            
+            for (const file of changedFiles) {
+              if (!file) continue;
+              documentation += `- \`${file}\`\n`;
+            }
+            
+            documentation += '\n## Automated Process\n\n';
+            documentation += 'This PR was generated and documented by the automated workflow system.\n';
+            
+            core.setOutput('documentation', documentation);
+            
+            return documentation;
+
+      - name: Update PR Description
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const documentation = `${{ steps.generate-docs.outputs.documentation }}`;
+            
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            let body = pr.data.body || '';
+            
+            // Add documentation section if not present
+            if (!body.includes('## Automated Documentation')) {
+              body += '\n\n---\n\n' + documentation;
+              
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                body: body
+              });
+              
+              console.log('Documentation added to PR description');
+            }
+
+      - name: Generate CHANGELOG Entry
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request?.number;
+            const prTitle = context.payload.pull_request?.title || 'Changes';
+            const prBody = context.payload.pull_request?.body || '';
+            
+            console.log('Generating CHANGELOG entry...');
+            
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Create CHANGELOG if it doesn't exist
+            const changelogPath = 'CHANGELOG.md';
+            let changelogContent = '';
+            
+            if (!fs.existsSync(changelogPath)) {
+              changelogContent = '# Changelog\n\n' +
+                'All notable changes to this project will be documented in this file.\n\n' +
+                'The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),\n' +
+                'and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n\n' +
+                '## [Unreleased]\n\n';
+            } else {
+              changelogContent = fs.readFileSync(changelogPath, 'utf8');
+            }
+            
+            // Extract PR changes from body or title
+            const date = new Date().toISOString().split('T')[0];
+            let changeType = '### Changed';
+            
+            // Determine change type from PR title
+            if (prTitle.match(/^feat/i)) {
+              changeType = '### Added';
+            } else if (prTitle.match(/^fix/i)) {
+              changeType = '### Fixed';
+            } else if (prTitle.match(/^docs/i)) {
+              changeType = '### Documentation';
+            } else if (prTitle.match(/^refactor/i)) {
+              changeType = '### Changed';
+            }
+            
+            // Create new entry
+            const newEntry = `\n${changeType}\n- ${prTitle}${prNumber ? ` (#${prNumber})` : ''} - ${date}\n`;
+            
+            // Insert after [Unreleased] header
+            const unreleasedIndex = changelogContent.indexOf('## [Unreleased]');
+            if (unreleasedIndex !== -1) {
+              const insertPoint = changelogContent.indexOf('\n', unreleasedIndex) + 1;
+              changelogContent = changelogContent.slice(0, insertPoint) + newEntry + changelogContent.slice(insertPoint);
+            } else {
+              // Append to end if no Unreleased section
+              changelogContent += newEntry;
+            }
+            
+            // Write back
+            fs.writeFileSync(changelogPath, changelogContent);
+            console.log('CHANGELOG.md updated with new entry');
+            console.log('Entry:', newEntry);

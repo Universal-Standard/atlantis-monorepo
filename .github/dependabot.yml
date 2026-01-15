@@ -1,0 +1,41 @@
+# Dependabot configuration for automated dependency updates
+version: 2
+updates:
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "dependencies"
+      - "automated"
+      - "auto-merge"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # npm dependencies - uncomment when package.json is added
+  # - package-ecosystem: "npm"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #   labels:
+  #     - "dependencies"
+  #     - "automated"
+  #     - "auto-merge"
+  #   commit-message:
+  #     prefix: "chore"
+  #     include: "scope"
+
+  # Python dependencies - uncomment when requirements.txt is added
+  # - package-ecosystem: "pip"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #   labels:
+  #     - "dependencies"
+  #     - "automated"
+  #     - "auto-merge"
+  #   commit-message:
+  #     prefix: "chore"
+  #     include: "scope"

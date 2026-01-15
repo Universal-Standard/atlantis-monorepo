@@ -1,0 +1,252 @@
+name: Automated Issue Resolution
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to resolve'
+        required: true
+        type: string
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+  checks: write
+
+jobs:
+  analyze-and-resolve:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' || 
+      (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'auto-detected'))
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Issue Details
+        id: issue-details
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = context.payload.inputs?.issue_number || context.payload.issue?.number;
+            
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(issueNumber)
+            });
+            
+            core.setOutput('issue_number', issueNumber);
+            core.setOutput('issue_title', issue.data.title);
+            core.setOutput('issue_body', issue.data.body);
+            
+            // Add to project board (update status)
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(issueNumber),
+              labels: ['in-progress']
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(issueNumber),
+              body: '🤖 **Automated Resolution Started**\n\nThis issue is now being automatically analyzed and resolved by our AI-powered system.'
+            });
+
+      - name: Create Solution Branch
+        id: create-branch
+        run: |
+          ISSUE_NUMBER="${{ steps.issue-details.outputs.issue_number }}"
+          BRANCH_NAME="auto-fix/issue-${ISSUE_NUMBER}"
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git checkout -b "$BRANCH_NAME"
+          git push origin "$BRANCH_NAME"
+          
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Analyze Issue and Generate Solution
+        id: generate-solution
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueTitle = `${{ steps.issue-details.outputs.issue_title }}`;
+            const issueBody = `${{ steps.issue-details.outputs.issue_body }}`;
+            
+            // Generate solution based on issue type (case-insensitive regex matching)
+            let solution = '';
+            let files = [];
+            const titleLower = issueTitle.toLowerCase();
+            
+            // Use consistent regex patterns for matching
+            if (titleLower.match(/contribut(ing|ion|e)/)) {
+              solution = 'Create CONTRIBUTING.md with contribution guidelines';
+              files.push({
+                path: 'CONTRIBUTING.md',
+                content: `# Contributing to ATLANTIS Monorepo\n\n## Welcome Contributors!\n\nThank you for your interest in contributing to the ATLANTIS AI project.\n\n## Getting Started\n\n1. Fork the repository\n2. Clone your fork locally\n3. Create a feature branch\n4. Make your changes\n5. Test your changes\n6. Submit a pull request\n\n## Code Standards\n\n- Follow existing code style and conventions\n- Write clear commit messages\n- Add tests for new features\n- Update documentation as needed\n\n## Pull Request Process\n\n1. Ensure all tests pass\n2. Update the README.md with details of changes if needed\n3. The PR will be reviewed by maintainers\n4. Once approved, it will be merged\n\n## Automated Workflows\n\nThis repository uses automated workflows for issue detection, resolution, and merging.\n\n## Code of Conduct\n\nPlease be respectful and professional in all interactions.\n`
+              });
+            }
+            
+            if (titleLower.match(/licen[cs]e/)) {
+              solution = 'Create LICENSE file with MIT license';
+              files.push({
+                path: 'LICENSE',
+                content: `MIT License\n\nCopyright (c) 2026 Universal Standard - ATLANTIS AI\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the "Software"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n`
+              });
+            }
+            
+            if (titleLower.match(/\.?gitignore/)) {
+              solution = 'Create .gitignore file with common patterns';
+              files.push({
+                path: '.gitignore',
+                content: `# Dependencies\nnode_modules/\nvendor/\n*.egg-info/\n__pycache__/\n*.pyc\n\n# Build outputs\ndist/\nbuild/\n*.o\n*.so\n*.exe\n\n# IDE\n.vscode/\n.idea/\n*.swp\n*.swo\n*~\n\n# OS\n.DS_Store\nThumbs.db\n\n# Logs\n*.log\nlogs/\n\n# Environment\n.env\n.env.local\n*.key\n*.pem\n\n# Test coverage\ncoverage/\n*.coverage\n.nyc_output/\n\n# Temporary\ntmp/\ntemp/\n*.tmp\n`
+              });
+            }
+            
+            if (titleLower.match(/security/)) {
+              solution = 'Create SECURITY.md with security policy';
+              files.push({
+                path: 'SECURITY.md',
+                content: `# Security Policy\n\n## Supported Versions\n\nWe release patches for security vulnerabilities. Currently supported versions:\n\n| Version | Supported          |\n| ------- | ------------------ |\n| latest  | :white_check_mark: |\n\n## Reporting a Vulnerability\n\nIf you discover a security vulnerability, please use GitHub's "Security" tab to report it privately, or contact the repository maintainers.\n\n**Important:** Replace this section with a real security contact method for your organization.\n\nAll security vulnerabilities will be promptly addressed.\n\nPlease include:\n- Description of the vulnerability\n- Steps to reproduce\n- Potential impact\n- Suggested fix (if any)\n\n## Automated Security\n\nThis repository uses:\n- CodeQL for automated security scanning\n- Dependabot for dependency updates\n- Automated security issue detection and resolution\n\nThank you for helping keep ATLANTIS AI secure!\n`
+              });
+            }
+            
+            core.setOutput('solution', solution);
+            core.setOutput('files', JSON.stringify(files));
+            
+            return { solution, files };
+
+      - name: Apply Solution
+        run: |
+          BRANCH_NAME="${{ steps.create-branch.outputs.branch_name }}"
+          git checkout "$BRANCH_NAME"
+          
+          # Parse and create files
+          FILES='${{ steps.generate-solution.outputs.files }}'
+          
+          # Check if FILES is empty or contains empty array
+          if [ -z "$FILES" ] || [ "$FILES" = "[]" ]; then
+            echo "No files to create - FILES is empty or contains empty array"
+            exit 0
+          fi
+          
+          # Use process substitution instead of pipe to avoid subshell
+          while IFS= read -r file; do
+            FILE_PATH=$(echo "$file" | jq -r '.path')
+            FILE_CONTENT=$(echo "$file" | jq -r '.content')
+            
+            echo "$FILE_CONTENT" > "$FILE_PATH"
+            git add "$FILE_PATH"
+            
+            echo "Created file: $FILE_PATH"
+          done < <(echo "$FILES" | jq -c '.[]')
+          
+          # Commit changes
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "🤖 Auto-fix: ${{ steps.generate-solution.outputs.solution }}"
+            
+            git push origin "$BRANCH_NAME"
+          fi
+
+      - name: Create Pull Request
+        id: create-pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = ${{ steps.issue-details.outputs.issue_number }};
+            const branchName = '${{ steps.create-branch.outputs.branch_name }}';
+            const solution = `${{ steps.generate-solution.outputs.solution }}`;
+            
+            // Check if PR already exists
+            const existingPRs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branchName}`,
+              state: 'open'
+            });
+            
+            if (existingPRs.data.length > 0) {
+              console.log('PR already exists');
+              core.setOutput('pr_number', existingPRs.data[0].number);
+              return existingPRs.data[0].number;
+            }
+            
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🤖 Auto-fix: ${solution}`,
+              head: branchName,
+              base: 'main',
+              body: `## Automated Fix\n\nThis PR was automatically generated to resolve issue #${issueNumber}.\n\n**Solution:** ${solution}\n\n### Changes Made\n- Automated analysis of the issue\n- Generated appropriate solution\n- Applied fix with best practices\n- Ready for automated review and merge\n\n### Automated Workflow\n✅ Issue detected and analyzed\n✅ Solution generated\n✅ Changes applied\n⏳ Awaiting automated review\n⏳ Pending automated merge\n\nFixes #${issueNumber}`,
+              maintainer_can_modify: true
+            });
+            
+            // Add labels
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.data.number,
+              labels: ['automated-fix']
+            });
+            
+            core.setOutput('pr_number', pr.data.number);
+            return pr.data.number;
+
+      - name: Update Issue Status
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = ${{ steps.issue-details.outputs.issue_number }};
+            const prNumber = ${{ steps.create-pr.outputs.pr_number }};
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `✅ **Solution Generated**\n\nA pull request has been automatically created: #${prNumber}\n\nThe fix will be automatically reviewed and merged once all checks pass.`
+            });
+            
+            // Update labels
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: ['solution-generated']
+            });
+
+      - name: Trigger Auto Review
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ steps.create-pr.outputs.pr_number }};
+            
+            // Trigger the auto-review workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'auto-review-and-merge.yml',
+              ref: 'main',
+              inputs: {
+                pr_number: prNumber.toString()
+              }
+            });

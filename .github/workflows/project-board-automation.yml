@@ -1,0 +1,143 @@
+name: Project Board Automation
+
+on:
+  issues:
+    types: [opened, labeled, closed]
+  pull_request:
+    types: [opened, closed, merged]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  repository-projects: write
+
+jobs:
+  manage-project-board:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add Issue to Project Board
+        if: github.event_name == 'issues' && github.event.action == 'opened'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('Issue opened - adding to project tracking');
+            
+            // Add status labels
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              labels: ['status:new']
+            });
+
+      - name: Update Issue Status - In Progress
+        if: |
+          github.event_name == 'issues' && 
+          github.event.action == 'labeled' &&
+          github.event.label.name == 'in-progress'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('Issue moved to in-progress');
+            
+            // Remove old status labels
+            const labels = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number
+            });
+            
+            for (const label of labels.data) {
+              if (label.name.startsWith('status:') && label.name !== 'status:in-progress') {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.issue.number,
+                  name: label.name
+                });
+              }
+            }
+            
+            // Add in-progress status
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              labels: ['status:in-progress']
+            });
+
+      - name: Update Issue Status - Completed
+        if: github.event_name == 'issues' && github.event.action == 'closed'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('Issue closed - marking as completed');
+            
+            // Add completed status
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              labels: ['status:completed']
+            });
+
+      - name: Link PR to Issue
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('PR opened - checking for linked issues');
+            
+            const prBody = context.payload.pull_request.body || '';
+            // Use GitHub's standard closing keywords for better accuracy
+            const issueMatch = prBody.match(/\b(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+(?:issue\s+)?#(\d+)\b/i);
+            
+            if (issueMatch) {
+              const issueNumber = parseInt(issueMatch[1]);
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: `🔗 Linked to PR #${context.payload.pull_request.number}`
+              });
+            }
+
+      - name: Archive Completed Items
+        if: |
+          (github.event_name == 'issues' && github.event.action == 'closed') ||
+          (github.event_name == 'pull_request' && github.event.action == 'closed')
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('Archiving completed item');
+            
+            const number = context.payload.issue?.number || context.payload.pull_request?.number;
+            const type = context.payload.issue ? 'issue' : 'pull_request';
+            
+            // Add archived label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: number,
+              labels: ['archived']
+            });
+            
+            // Lock conversation
+            try {
+              await github.rest.issues.lock({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: number,
+                lock_reason: 'resolved'
+              });
+            } catch (error) {
+              console.log('Could not lock:', error.message);
+            }

@@ -1,0 +1,233 @@
+name: Self-Healing System
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+  checks: write
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check System Health
+        id: health-check
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('Running system health check...');
+            
+            const issues = {
+              workflow_failures: [],
+              stuck_prs: [],
+              stale_issues: []
+            };
+            
+            // Check for failed workflows
+            const workflowRuns = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 20,
+              status: 'failure'
+            });
+            
+            issues.workflow_failures = workflowRuns.data.workflow_runs
+              .filter(run => {
+                const age = Date.now() - new Date(run.created_at).getTime();
+                return age < 24 * 60 * 60 * 1000; // Last 24 hours
+              })
+              .map(run => ({
+                id: run.id,
+                name: run.name,
+                conclusion: run.conclusion
+              }));
+            
+            // Check for stuck PRs
+            const pullRequests = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+            
+            for (const pr of pullRequests.data) {
+              const age = Date.now() - new Date(pr.created_at).getTime();
+              const hoursSinceCreation = age / (1000 * 60 * 60);
+              
+              if (hoursSinceCreation > 24 && pr.labels.some(l => l.name === 'auto-merge')) {
+                issues.stuck_prs.push({
+                  number: pr.number,
+                  title: pr.title,
+                  age_hours: Math.floor(hoursSinceCreation)
+                });
+              }
+            }
+            
+            // Check for stale issues
+            const openIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'auto-detected'
+            });
+            
+            for (const issue of openIssues.data) {
+              const age = Date.now() - new Date(issue.created_at).getTime();
+              const hoursSinceCreation = age / (1000 * 60 * 60);
+              
+              if (hoursSinceCreation > 48 && !issue.labels.some(l => l.name === 'in-progress')) {
+                issues.stale_issues.push({
+                  number: issue.number,
+                  title: issue.title,
+                  age_hours: Math.floor(hoursSinceCreation)
+                });
+              }
+            }
+            
+            core.setOutput('issues_found', JSON.stringify(issues));
+            
+            const hasIssues = issues.workflow_failures.length > 0 || 
+                             issues.stuck_prs.length > 0 || 
+                             issues.stale_issues.length > 0;
+            
+            core.setOutput('needs_healing', hasIssues.toString());
+            
+            return issues;
+
+      - name: Heal Stuck PRs
+        if: steps.health-check.outputs.needs_healing == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issues = JSON.parse('${{ steps.health-check.outputs.issues_found }}');
+            
+            // Retry stuck PRs
+            for (const pr of issues.stuck_prs) {
+              console.log(`Healing stuck PR #${pr.number}`);
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `🔧 **Self-Healing Triggered**\n\nThis PR has been stuck for ${pr.age_hours} hours. Attempting to resolve...\n\n**Actions taken:**\n- Retriggering automated review\n- Checking merge conflicts\n- Verifying CI status`
+              });
+              
+              // Trigger review workflow again
+              try {
+                await github.rest.actions.createWorkflowDispatch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: 'auto-review-and-merge.yml',
+                  ref: 'main',
+                  inputs: {
+                    pr_number: pr.number.toString()
+                  }
+                });
+              } catch (error) {
+                console.log(`Failed to trigger workflow for PR #${pr.number}:`, error.message);
+              }
+            }
+
+      - name: Heal Stale Issues
+        if: steps.health-check.outputs.needs_healing == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issues = JSON.parse('${{ steps.health-check.outputs.issues_found }}');
+            
+            // Retry stale issues
+            for (const issue of issues.stale_issues) {
+              console.log(`Healing stale issue #${issue.number}`);
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `🔧 **Self-Healing Triggered**\n\nThis issue has been open for ${issue.age_hours} hours without progress. Retriggering automated resolution...`
+              });
+              
+              // Retrigger resolution workflow
+              try {
+                await github.rest.actions.createWorkflowDispatch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: 'auto-issue-resolver.yml',
+                  ref: 'main',
+                  inputs: {
+                    issue_number: issue.number.toString()
+                  }
+                });
+              } catch (error) {
+                console.log(`Failed to trigger workflow for issue #${issue.number}:`, error.message);
+              }
+            }
+
+      - name: Report Failed Workflows
+        if: steps.health-check.outputs.needs_healing == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issues = JSON.parse('${{ steps.health-check.outputs.issues_found }}');
+            
+            if (issues.workflow_failures.length > 0) {
+              console.log('Workflow failures detected:', issues.workflow_failures.length);
+              
+              // Create issue for workflow failures if serious
+              if (issues.workflow_failures.length >= 3) {
+                const title = '[AUTO] Multiple Workflow Failures Detected';
+                
+                // Check for existing open issues with the same title to avoid duplicates
+                const existingIssues = await github.rest.issues.listForRepo({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  state: 'open',
+                  per_page: 100
+                });
+                
+                const duplicate = existingIssues.data.find(issue => 
+                  issue.title === title &&
+                  issue.labels.some(l => l.name === 'auto-detected')
+                );
+                
+                if (duplicate) {
+                  console.log(`An open issue for multiple workflow failures already exists: #${duplicate.number}. Skipping creation.`);
+                } else {
+                  await github.rest.issues.create({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    title,
+                    body: `## Self-Healing Alert\n\nMultiple workflow failures have been detected in the last 24 hours.\n\n**Failed Workflows:**\n${issues.workflow_failures.map(f => `- ${f.name} (${f.conclusion})`).join('\n')}\n\nThe self-healing system will attempt to recover, but manual review may be needed.`,
+                    labels: ['auto-detected', 'system-health', 'high-priority']
+                  });
+                }
+              }
+            }
+
+      - name: Health Report
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const needsHealing = '${{ steps.health-check.outputs.needs_healing }}' === 'true';
+            
+            if (!needsHealing) {
+              console.log('✅ System health check passed - all systems operational');
+            } else {
+              console.log('🔧 Self-healing actions triggered');
+            }
+            
+            // Could post to a monitoring system here

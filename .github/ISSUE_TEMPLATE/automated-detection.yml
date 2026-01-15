@@ -1,0 +1,59 @@
+# Issue template for automated issue detection
+name: Automated Issue Detection
+description: Template for issues detected by the automated system
+labels: ["auto-detected", "needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🤖 Automated Issue Detection
+        This issue was automatically detected by our AI-powered scanning system.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Issue Description
+      description: What was detected?
+      placeholder: Describe the issue that was automatically detected
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this issue?
+      options:
+        - Low
+        - Medium
+        - High
+        - Critical
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What type of issue is this?
+      options:
+        - Documentation
+        - Security
+        - Code Quality
+        - Performance
+        - Dependencies
+        - Configuration
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: automated
+    attributes:
+      label: Automated Processing
+      description: This issue will be automatically processed
+      options:
+        - label: Automatic resolution enabled
+          required: true
+        - label: Self-healing enabled
+          required: true
