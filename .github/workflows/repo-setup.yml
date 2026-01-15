@@ -141,12 +141,12 @@ jobs:
           # Create archived resolutions directory
           mkdir -p .github/archived-resolutions
           cat > .github/archived-resolutions/README.md << 'EOF'
-# Archived Resolutions
-
-This directory contains archived documentation of automated issue resolutions.
-
-Each file represents a completed automated workflow from issue detection to merge.
-EOF
+          # Archived Resolutions
+          
+          This directory contains archived documentation of automated issue resolutions.
+          
+          Each file represents a completed automated workflow from issue detection to merge.
+          EOF
           
           echo "✅ Initial documentation created"
 

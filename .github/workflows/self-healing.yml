@@ -194,11 +194,13 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   state: 'open',
-                  labels: 'auto-detected,system-health,high-priority',
                   per_page: 100
                 });
                 
-                const duplicate = existingIssues.data.find(issue => issue.title === title);
+                const duplicate = existingIssues.data.find(issue => 
+                  issue.title === title &&
+                  issue.labels.some(l => l.name === 'auto-detected')
+                );
                 
                 if (duplicate) {
                   console.log(`An open issue for multiple workflow failures already exists: #${duplicate.number}. Skipping creation.`);

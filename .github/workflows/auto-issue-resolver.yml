@@ -136,6 +136,12 @@ jobs:
           # Parse and create files
           FILES='${{ steps.generate-solution.outputs.files }}'
           
+          # Check if FILES is empty or contains empty array
+          if [ -z "$FILES" ] || [ "$FILES" = "[]" ]; then
+            echo "No files to create - FILES is empty or contains empty array"
+            exit 0
+          fi
+          
           # Use process substitution instead of pipe to avoid subshell
           while IFS= read -r file; do
             FILE_PATH=$(echo "$file" | jq -r '.path')
