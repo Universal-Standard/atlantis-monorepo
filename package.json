@@ -1,0 +1,13 @@
+{
+  "name": "atlantis-monorepo",
+  "version": "1.0.0",
+  "description": "ATLANTIS automated workflow monorepo",
+  "private": true,
+  "scripts": {
+    "test": "node --test scripts/safe-loader.test.js",
+    "lint": "node --check scripts/safe-loader.js scripts/safe-loader.test.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
