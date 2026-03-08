@@ -130,41 +130,13 @@ jobs:
             else
               echo "✓ No potential hard-coded secrets detected in changed files"
             fi
-          else
-            echo "No relevant changed files to scan for secrets"
-          # Improved secret scanning - check for potential secrets in code files
-          echo "Scanning for potential hard-coded secrets..."
-          
-          # Get changed files only
-          CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || git diff --name-only origin/main 2>/dev/null || echo "")
-          
-          if [ -n "$CHANGED_FILES" ]; then
-            # Filter to code files (exclude common non-code files)
-            CODE_FILES=$(echo "$CHANGED_FILES" | grep -v -E '\.(md|txt|json|yml|yaml|png|jpg|jpeg|gif|svg|ico|pdf)$' || true)
-            
-            if [ -n "$CODE_FILES" ]; then
-              echo "Scanning changed code files for potential secrets..."
-              
-              # Look for assignment patterns that might indicate secrets
-              # Pattern: variable names containing password/secret/key/token followed by assignment with quoted value
-              if echo "$CODE_FILES" | xargs grep -n -E '\b(password|secret|api[_-]?key|token|auth[_-]?token|private[_-]?key)\b\s*[:=]\s*["\047][^"\047\s]{8,}["\047]' 2>/dev/null | grep -q .; then
-                echo "⚠️ Potential hard-coded secrets detected!"
-                echo "$CODE_FILES" | xargs grep -n -E '\b(password|secret|api[_-]?key|token|auth[_-]?token|private[_-]?key)\b\s*[:=]\s*["\047][^"\047\s]{8,}["\047]' 2>/dev/null || true
-                SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
-              else
-                echo "✅ No obvious hard-coded secrets detected in changed code files"
-              fi
-              
-              # Additional check: look for AWS keys, GitHub tokens, etc.
-              if echo "$CODE_FILES" | xargs grep -E 'AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}' 2>/dev/null | grep -q .; then
-                echo "⚠️ Potential API keys or tokens detected (AWS/GitHub patterns)!"
-                SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
-              fi
-            else
-              echo "No code files changed - skipping secret scan"
+            # Additional check: look for AWS keys, GitHub tokens, etc.
+            if echo "$SECRET_SCAN_FILES" | xargs grep -E 'AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}' 2>/dev/null | grep -q .; then
+              echo "⚠️ Potential API keys or tokens detected (AWS/GitHub patterns)!"
+              SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
             fi
           else
-            echo "No changed files detected - skipping secret scan"
+            echo "No relevant changed files to scan for secrets"
           fi
           
           echo "security_issues=$SECURITY_ISSUES" >> $GITHUB_OUTPUT

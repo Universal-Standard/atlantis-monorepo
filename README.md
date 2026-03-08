@@ -98,7 +98,9 @@ This repository implements a **completely automated** software development workf
 │   ├── auto-review-and-merge.yml    # Reviews and merges PRs
 │   ├── auto-documentation.yml       # Generates documentation
 │   ├── project-board-automation.yml # Manages project tracking
-│   └── self-healing.yml            # Health monitoring & recovery
+│   ├── self-healing.yml             # Health monitoring & recovery
+│   ├── master-orchestrator.yml      # Hourly system coordinator
+│   └── repo-setup.yml              # Repository configuration & labels
 └── archived-resolutions/           # Archive of resolved issues
 ```
 
