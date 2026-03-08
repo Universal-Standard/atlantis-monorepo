@@ -2,52 +2,67 @@
 
 ## Supported Versions
 
-We release patches for security vulnerabilities. Currently supported versions:
+The following versions of the ATLANTIS monorepo are currently supported with security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| latest  | :white_check_mark: |
+| main    | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please report it responsibly:
+We take security vulnerabilities seriously. If you discover a security issue in this repository, please follow these steps:
 
-### Using GitHub's Security Advisory
+### Private Disclosure
 
-1. Go to the "Security" tab in this repository
-2. Click "Report a vulnerability"
-3. Fill out the form with details
+**Do not** report security vulnerabilities through public GitHub issues. Instead, please use the following method:
 
-### Important
+1. **GitHub Security Advisories**: Use the [Report a Vulnerability](../../security/advisories/new) button on the Security tab of this repository to submit a private security report.
 
-**DO NOT** create a public issue for security vulnerabilities. Use GitHub's private vulnerability reporting feature or contact the repository maintainers directly.
+### What to Include
 
-Replace this section with your organization's specific security contact method if needed.
+When reporting a vulnerability, please provide as much of the following information as possible:
 
-All security vulnerabilities will be promptly addressed.
+- A description of the vulnerability and its potential impact
+- The affected component(s) or workflow(s)
+- Steps to reproduce the issue
+- Any potential mitigations you have identified
+- Your contact information for follow-up questions
 
-## What to Include in Your Report
+### Response Timeline
 
-Please include:
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact
-- Suggested fix (if any)
-- Your contact information (optional but helpful)
+- **Acknowledgement**: We will acknowledge receipt of your report within **48 hours**.
+- **Assessment**: We will assess the severity and impact within **7 days**.
+- **Resolution**: We aim to resolve confirmed vulnerabilities within **30 days**, depending on complexity.
+- **Disclosure**: We will coordinate public disclosure with you once a fix is available.
 
-## Response Timeline
+## Security Practices
 
-- **Acknowledgment**: Within 48 hours
-- **Initial Assessment**: Within 1 week
-- **Fix Development**: Depends on severity and complexity
-- **Public Disclosure**: After fix is available, coordinated with reporter
+### Automated Security Scanning
 
-## Automated Security
+This repository uses several automated security measures:
 
-This repository uses:
-- **CodeQL** for automated security scanning
-- **Dependabot** for dependency updates
-- **Automated security issue detection** and resolution
-- **Secret scanning** in code reviews
+- **CodeQL Analysis**: Automated code scanning to detect common vulnerabilities.
+- **Dependabot**: Automated dependency updates to address known vulnerabilities in dependencies.
+- **Secret Detection**: Automated scanning to prevent accidental exposure of credentials or secrets in commits.
 
-Thank you for helping keep ATLANTIS AI secure! 🔒
+### Workflow Security
+
+All GitHub Actions workflows in this repository follow security best practices:
+
+- Workflow permissions are explicitly scoped at the workflow level rather than relying on default token permissions.
+- Third-party actions are pinned to specific version tags.
+- Secrets are managed through GitHub Encrypted Secrets and never hardcoded.
+
+## Security Updates
+
+Security patches and updates will be applied to the `main` branch. Users are encouraged to keep their forks and deployments up to date with the latest changes from `main`.
+
+## Responsible Disclosure
+
+We are committed to working with security researchers in good faith. We ask that you:
+
+- Give us reasonable time to address the issue before any public disclosure.
+- Avoid accessing, modifying, or deleting data that does not belong to you.
+- Act in good faith and avoid disrupting the availability of our systems.
+
+We appreciate the efforts of the security community and will acknowledge contributors who responsibly disclose vulnerabilities (with their permission).
