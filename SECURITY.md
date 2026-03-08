@@ -14,10 +14,9 @@ We take security vulnerabilities seriously. If you discover a security issue in 
 
 ### Private Disclosure
 
-**Do not** report security vulnerabilities through public GitHub issues. Instead, please use one of the following methods:
+**Do not** report security vulnerabilities through public GitHub issues. Instead, please use the following method:
 
 1. **GitHub Security Advisories**: Use the [Report a Vulnerability](../../security/advisories/new) button on the Security tab of this repository to submit a private security report.
-2. **Email**: Contact the repository maintainers directly at the email address listed in the repository profile.
 
 ### What to Include
 
