@@ -58,7 +58,7 @@ describe('safeRequire', () => {
         assert.match(err.message, /safeRequire/, 'message includes "safeRequire"');
         assert.match(err.message, /CONTRIBUTING\.md/, 'message includes the offending path');
         assert.match(err.message, /\.md/, 'message includes the offending extension');
-        assert.match(err.message, /recognised code extension/, 'message is descriptive');
+        assert.match(err.message, /recognized code extension/, 'message is descriptive');
         return true;
       },
     );

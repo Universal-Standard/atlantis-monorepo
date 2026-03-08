@@ -24,7 +24,7 @@ const path = require('path');
 const CODE_EXTENSIONS = new Set(['.js', '.cjs', '.mjs', '.ts', '.jsx', '.tsx']);
 
 /**
- * Returns true when `filePath` ends with a recognised code extension.
+ * Returns true when `filePath` ends with a recognized code extension.
  *
  * @param {string} filePath - File name or absolute/relative path.
  * @returns {boolean}
@@ -35,21 +35,21 @@ function isCodeFile(filePath) {
 }
 
 /**
- * Requires a module only when it carries a recognised code extension.
+ * Requires a module only when it carries a recognized code extension.
  *
  * Calling `require('CONTRIBUTING.md')` or any non-code path throws a
  * descriptive error instead of propagating a cryptic SyntaxError.
  *
  * @param {string} filePath - Path passed to require().
  * @returns {*} The module export.
- * @throws {Error} When `filePath` does not have a recognised code extension.
+ * @throws {Error} When `filePath` does not have a recognized code extension.
  */
 function safeRequire(filePath) {
   if (!isCodeFile(filePath)) {
     const ext = path.extname(filePath) || '(no extension)';
     throw new Error(
       `safeRequire: refusing to load "${filePath}" – ` +
-        `the extension "${ext}" is not a recognised code extension. ` +
+        `the extension "${ext}" is not a recognized code extension. ` +
         `Only [${[...CODE_EXTENSIONS].join(', ')}] files may be required.`,
     );
   }
@@ -58,7 +58,7 @@ function safeRequire(filePath) {
 }
 
 /**
- * Reads a directory and returns only entries whose names carry a recognised
+ * Reads a directory and returns only entries whose names carry a recognized
  * code extension.  Non-code files (*.md, *.txt, *.yml, etc.) are silently
  * skipped.
  *
