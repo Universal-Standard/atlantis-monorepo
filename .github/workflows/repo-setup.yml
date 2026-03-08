@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configure Repository Settings
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -45,7 +45,7 @@ jobs:
             }
 
       - name: Enable Automated Security Fixes
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -63,7 +63,7 @@ jobs:
             }
 
       - name: Enable Vulnerability Alerts
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -81,7 +81,7 @@ jobs:
             }
 
       - name: Setup Labels
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -142,16 +142,16 @@ jobs:
           mkdir -p .github/archived-resolutions
           cat > .github/archived-resolutions/README.md << 'EOF'
           # Archived Resolutions
-
+          
           This directory contains archived documentation of automated issue resolutions.
-
+          
           Each file represents a completed automated workflow from issue detection to merge.
           EOF
           
           echo "✅ Initial documentation created"
 
       - name: Setup Complete
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
