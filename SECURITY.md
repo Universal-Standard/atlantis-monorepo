@@ -50,7 +50,7 @@ This repository uses several automated security measures:
 
 All GitHub Actions workflows in this repository follow security best practices:
 
-- Least-privilege permissions are applied to each workflow.
+- Workflow permissions are explicitly scoped at the workflow level rather than relying on default token permissions.
 - Third-party actions are pinned to specific version tags.
 - Secrets are managed through GitHub Encrypted Secrets and never hardcoded.
 
