@@ -1,0 +1,139 @@
+# OS and Editor Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+.*.swp
+.*.swo
+*.tmp
+
+# IDE and Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.project
+.settings/
+*.iml
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.cache
+
+# Build artifacts (if any future code is added)
+dist/
+build/
+out/
+*.o
+*.pyc
+*.pyo
+__pycache__/
+*.class
+*.jar
+*.war
+
+# Dependencies (if any future code is added)
+node_modules/
+vendor/
+.bundle/
+*.gem
+
+# Test coverage (if tests are added)
+coverage/
+.coverage
+*.cover
+.pytest_cache/
+.tox/
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+
+# Package manager files (lock files can be committed in some cases)
+# Uncomment if your project uses these and you want to ignore them
+# package-lock.json
+# yarn.lock
+# Gemfile.lock
+
+# GitHub Actions local testing
+.act/
+
+# Archive and backup files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+*.backup
+
+# Documentation build artifacts (if using doc generators)
+site/
+_site/
+.jekyll-cache/
+.bundle/
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# JetBrains IDEs
+.idea/
+*.iws
+*.ipr
+*.iml
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
