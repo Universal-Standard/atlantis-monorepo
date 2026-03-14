@@ -79,11 +79,14 @@ jobs:
       - name: Analyze Issue and Generate Solution
         id: generate-solution
         uses: actions/github-script@v8
+        env:
+          ISSUE_TITLE: ${{ steps.issue-details.outputs.issue_title }}
+          ISSUE_BODY: ${{ steps.issue-details.outputs.issue_body }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issueTitle = `${{ steps.issue-details.outputs.issue_title }}`;
-            const issueBody = `${{ steps.issue-details.outputs.issue_body }}`;
+            const issueTitle = process.env.ISSUE_TITLE || '';
+            const issueBody = process.env.ISSUE_BODY || '';
             
             // Generate solution based on issue type (case-insensitive regex matching)
             let solution = '';
@@ -200,12 +203,14 @@ jobs:
       - name: Create Pull Request
         id: create-pr
         uses: actions/github-script@v8
+        env:
+          SOLUTION: ${{ steps.generate-solution.outputs.solution }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const issueNumber = ${{ steps.issue-details.outputs.issue_number }};
             const branchName = '${{ steps.create-branch.outputs.branch_name }}';
-            const solution = `${{ steps.generate-solution.outputs.solution }}`;
+            const solution = process.env.SOLUTION || '';
             
             // Check if PR already exists
             const existingPRs = await github.rest.pulls.list({

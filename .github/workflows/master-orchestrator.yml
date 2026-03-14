@@ -102,12 +102,14 @@ jobs:
 
       - name: Process Pending Items
         uses: actions/github-script@v8
+        env:
+          SYSTEM_STATUS: ${{ steps.status.outputs.status }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const status = JSON.parse('${{ steps.status.outputs.status }}');
+            const status = JSON.parse(process.env.SYSTEM_STATUS || '{"open_issues":0,"open_prs":0,"pending_reviews":0,"ready_to_merge":0}');
             
-            if (status.open_issues === 0 && status.open_prs === 0) {
+            if ((status.open_issues ?? 0) === 0 && (status.open_prs ?? 0) === 0) {
               console.log('✅ No pending items - system idle');
               return;
             }
@@ -184,10 +186,12 @@ jobs:
 
       - name: Orchestration Summary
         uses: actions/github-script@v8
+        env:
+          SYSTEM_STATUS: ${{ steps.status.outputs.status }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const status = JSON.parse('${{ steps.status.outputs.status }}');
+            const status = JSON.parse(process.env.SYSTEM_STATUS || '{"open_issues":0,"open_prs":0,"pending_reviews":0,"ready_to_merge":0}');
             
             console.log('\n' + '═'.repeat(60));
             console.log('🤖 ATLANTIS Orchestration Complete');
