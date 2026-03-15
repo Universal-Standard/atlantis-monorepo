@@ -197,11 +197,13 @@ jobs:
 
       - name: Post Review Comment
         uses: actions/github-script@v8
+        env:
+          REVIEW_BODY: ${{ steps.review-report.outputs.review_body }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = ${{ steps.pr-details.outputs.pr_number }};
-            const reviewBody = `${{ steps.review-report.outputs.review_body }}`;
+            const reviewBody = process.env.REVIEW_BODY || '';
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
