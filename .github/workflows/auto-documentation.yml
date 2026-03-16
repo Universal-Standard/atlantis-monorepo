@@ -43,10 +43,12 @@ jobs:
       - name: Generate Documentation
         id: generate-docs
         uses: actions/github-script@v8
+        env:
+          CHANGED_FILES: ${{ steps.analyze.outputs.changed_files }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const changedFiles = `${{ steps.analyze.outputs.changed_files }}`.split('\n').filter(f => f.trim());
+            const changedFiles = process.env.CHANGED_FILES.split('\n').filter(f => f.trim());
             
             let documentation = '# Automated Documentation\n\n';
             documentation += '## Changes Summary\n\n';
@@ -67,11 +69,13 @@ jobs:
       - name: Update PR Description
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v8
+        env:
+          DOCUMENTATION: ${{ steps.generate-docs.outputs.documentation }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = context.payload.pull_request.number;
-            const documentation = `${{ steps.generate-docs.outputs.documentation }}`;
+            const documentation = process.env.DOCUMENTATION;
             
             const pr = await github.rest.pulls.get({
               owner: context.repo.owner,
