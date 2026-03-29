@@ -48,7 +48,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const changedFiles = process.env.CHANGED_FILES.split('\n').filter(f => f.trim());
+            const changedFiles = (process.env.CHANGED_FILES || '').split('\n').filter(f => f.trim());
             
             let documentation = '# Automated Documentation\n\n';
             documentation += '## Changes Summary\n\n';
@@ -75,7 +75,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = context.payload.pull_request.number;
-            const documentation = process.env.DOCUMENTATION;
+            const documentation = process.env.DOCUMENTATION || '';
             
             const pr = await github.rest.pulls.get({
               owner: context.repo.owner,
