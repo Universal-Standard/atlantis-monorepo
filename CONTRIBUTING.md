@@ -84,7 +84,7 @@ node --version  # should be v18.0.0 or higher
 ### GitHub Actions Workflows
 
 - Scope `permissions` explicitly at the workflow or job level.
-- Pin third-party actions to a specific version tag (e.g., `actions/checkout@v4`).
+- Pin third-party actions to a specific version tag (e.g., `actions/checkout@v6`).
 - Never hardcode secrets — use GitHub Encrypted Secrets.
 
 ## Testing
