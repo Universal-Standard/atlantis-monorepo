@@ -216,6 +216,7 @@ If you have questions, please:
 
 - Check existing documentation (README, SETUP_GUIDE, SECURITY).
 - Review open and closed issues.
-- Open a new issue with the `question` label.
+- Use the GitHub **Discussions** tab (for Q&A) if it is enabled for this repository.
+- If Discussions are not available, open a new issue using the most appropriate available template and clearly indicate in the title that it is a **question** (for example, prefix the title with `[Question]`).
 
 Thank you for contributing to ATLANTIS AI! 🤖
