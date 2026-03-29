@@ -231,7 +231,7 @@ jobs:
               repo: context.repo.repo,
               title: `🤖 Auto-fix: ${solution}`,
               head: branchName,
-              base: 'main',
+              base: context.ref.replace('refs/heads/', ''),
               body: `## Automated Fix\n\nThis PR was automatically generated to resolve issue #${issueNumber}.\n\n**Solution:** ${solution}\n\n### Changes Made\n- Automated analysis of the issue\n- Generated appropriate solution\n- Applied fix with best practices\n- Ready for automated review and merge\n\n### Automated Workflow\n✅ Issue detected and analyzed\n✅ Solution generated\n✅ Changes applied\n⏳ Awaiting automated review\n⏳ Pending automated merge\n\nFixes #${issueNumber}`,
               maintainer_can_modify: true
             });
@@ -282,7 +282,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'auto-review-and-merge.yml',
-              ref: 'main',
+              ref: context.ref.replace('refs/heads/', ''),
               inputs: {
                 pr_number: prNumber.toString()
               }

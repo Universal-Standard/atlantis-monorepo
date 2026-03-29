@@ -93,7 +93,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 workflow_id: 'auto-issue-detector.yml',
-                ref: 'main'
+                ref: context.ref.replace('refs/heads/', '')
               });
               console.log('✅ Issue detection triggered');
             } catch (error) {
@@ -142,7 +142,7 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   workflow_id: 'auto-issue-resolver.yml',
-                  ref: 'main',
+                  ref: context.ref.replace('refs/heads/', ''),
                   inputs: {
                     issue_number: issue.number.toString()
                   }
@@ -172,7 +172,7 @@ jobs:
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     workflow_id: 'auto-review-and-merge.yml',
-                    ref: 'main',
+                    ref: context.ref.replace('refs/heads/', ''),
                     inputs: {
                       pr_number: pr.number.toString()
                     }
