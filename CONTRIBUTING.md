@@ -78,7 +78,7 @@ node --version  # should be v18.0.0 or higher
 ### JavaScript / Node.js
 
 - Use CommonJS `require`/`module.exports` unless the file already uses ES modules.
-- Always supply file extensions in `require()` paths (e.g., `require('./safe-loader.js')`).
+- Prefer explicit file extensions in local `require()` paths (e.g., `require('./safe-loader.js')`), but extensionless requires (e.g., `require('./safe-loader')`) are acceptable where consistent with existing code and Node.js module resolution.
 - Avoid dynamic `require()` or `eval()`; use `scripts/safe-loader.js` utilities when loading external content.
 
 ### GitHub Actions Workflows
