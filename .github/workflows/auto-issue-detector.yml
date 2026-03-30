@@ -129,6 +129,7 @@ jobs:
                 inputs: {
                   issue_number: newIssue.data.number.toString()
                 }
+              });
             }
 
       - name: Cleanup
