@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Get PR Details
         id: pr-details
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -52,7 +52,7 @@ jobs:
             });
 
       - name: Checkout PR
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ steps.pr-details.outputs.pr_sha }}
           fetch-depth: 0
@@ -87,11 +87,11 @@ jobs:
           echo "Checking for common issues..."
           
           # Check for trailing whitespace
-          if ! git diff origin/main --check ; then
+          if git diff origin/main --check ; then
+            echo "No trailing whitespace found"
+          else
             echo "Trailing whitespace found"
             ISSUES_FOUND=$((ISSUES_FOUND + 1))
-          else
-            echo "No trailing whitespace found"
           fi
           
           # Check for large files
@@ -110,39 +110,33 @@ jobs:
           
           SECURITY_ISSUES=0
           
-          # Improved secret scanning - check for potential secrets in code files
-          echo "Scanning for potential hard-coded secrets..."
-          
-          # Get changed files only
-          CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || git diff --name-only origin/main 2>/dev/null || echo "")
+          # Check for potential secrets in changed files with assignment-like patterns
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD || git diff --name-only origin/main || echo "")
           
           if [ -n "$CHANGED_FILES" ]; then
-            # Filter to code files (exclude common non-code files)
-            CODE_FILES=$(echo "$CHANGED_FILES" | grep -v -E '\.(md|txt|json|yml|yaml|png|jpg|jpeg|gif|svg|ico|pdf)$' || true)
-            
-            if [ -n "$CODE_FILES" ]; then
-              echo "Scanning changed code files for potential secrets..."
-              
-              # Look for assignment patterns that might indicate secrets
-              # Pattern: variable names containing password/secret/key/token followed by assignment with quoted value
-              if echo "$CODE_FILES" | xargs grep -n -E '\b(password|secret|api[_-]?key|token|auth[_-]?token|private[_-]?key)\b\s*[:=]\s*["\047][^"\047\s]{8,}["\047]' 2>/dev/null | grep -q .; then
-                echo "⚠️ Potential hard-coded secrets detected!"
-                echo "$CODE_FILES" | xargs grep -n -E '\b(password|secret|api[_-]?key|token|auth[_-]?token|private[_-]?key)\b\s*[:=]\s*["\047][^"\047\s]{8,}["\047]' 2>/dev/null || true
-                SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
-              else
-                echo "✅ No obvious hard-coded secrets detected in changed code files"
-              fi
-              
-              # Additional check: look for AWS keys, GitHub tokens, etc.
-              if echo "$CODE_FILES" | xargs grep -E 'AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}' 2>/dev/null | grep -q .; then
-                echo "⚠️ Potential API keys or tokens detected (AWS/GitHub patterns)!"
-                SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
-              fi
+            # Exclude documentation and config template files
+            SECRET_SCAN_FILES=$(echo "$CHANGED_FILES" | grep -Ev '\.(md|markdown|rst|txt|example|sample|template)$' || true)
+          else
+            SECRET_SCAN_FILES=""
+          fi
+          
+          if [ -n "$SECRET_SCAN_FILES" ]; then
+            echo "Scanning changed files for hard-coded secrets with assignment patterns..."
+            # Look for patterns like password="value", api_key = "value", token: "value"
+            if echo "$SECRET_SCAN_FILES" | xargs grep -E '(password|secret|api[_-]?key|token|credentials)\s*[:=]\s*["\047][^"\047[:space:]]{8,}["\047]' 2>/dev/null | grep -v -E '(example|sample|placeholder|your_|xxx|yyy|zzz|\*\*\*|test)' >/tmp/secret_scan_matches; then
+              echo "⚠️ Potential hard-coded secrets detected in the following locations:"
+              cat /tmp/secret_scan_matches
+              SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
             else
-              echo "No code files changed - skipping secret scan"
+              echo "✓ No potential hard-coded secrets detected in changed files"
+            fi
+            # Additional check: look for AWS keys, GitHub tokens, etc.
+            if echo "$SECRET_SCAN_FILES" | xargs grep -E 'AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}' 2>/dev/null | grep -q .; then
+              echo "⚠️ Potential API keys or tokens detected (AWS/GitHub patterns)!"
+              SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
             fi
           else
-            echo "No changed files detected - skipping secret scan"
+            echo "No relevant changed files to scan for secrets"
           fi
           
           echo "security_issues=$SECURITY_ISSUES" >> $GITHUB_OUTPUT
@@ -164,7 +158,7 @@ jobs:
 
       - name: Generate Review Report
         id: review-report
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -202,12 +196,14 @@ jobs:
             return reviewBody;
 
       - name: Post Review Comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
+        env:
+          REVIEW_BODY: ${{ steps.review-report.outputs.review_body }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = ${{ steps.pr-details.outputs.pr_number }};
-            const reviewBody = `${{ steps.review-report.outputs.review_body }}`;
+            const reviewBody = process.env.REVIEW_BODY || '';
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -218,7 +214,7 @@ jobs:
 
       - name: Approve PR
         if: steps.review-report.outputs.approved == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -255,14 +251,14 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'automated-fix')
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get PR Details
         id: pr-details
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -281,104 +277,108 @@ jobs:
             return pr.data;
 
       - name: Wait for Checks
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const prNumber = parseInt('${{ steps.pr-details.outputs.pr_number }}', 10);
+            const prNumber = ${{ steps.pr-details.outputs.pr_number }};
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             
-            // Get PR details to get the head SHA
-            const { data: pr } = await github.rest.pulls.get({
-              owner,
-              repo,
-              pull_number: prNumber
-            });
+            const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
             
-            const headSha = pr.head.sha;
-            console.log(`Polling checks for PR #${prNumber} (SHA: ${headSha})`);
+            const maxAttempts = 60; // ~30 minutes with a 30s interval
+            const intervalMs = 30000;
             
-            // Poll for check completion with timeout
-            const maxAttempts = 60; // 30 minutes with 30s intervals
-            const pollIntervalMs = 30000; // 30 seconds
+            function checksIndicateFailure(checkRuns) {
+              if (!checkRuns || checkRuns.length === 0) {
+                return false;
+              }
+              const failingConclusions = ['failure', 'cancelled', 'timed_out', 'action_required', 'stale'];
+              return checkRuns.some((run) => run.conclusion && failingConclusions.includes(run.conclusion));
+            }
+            
+            function allChecksCompleted(checkRuns) {
+              if (!checkRuns || checkRuns.length === 0) {
+                return true; // If no checks, consider them complete
+              }
+              return checkRuns.every((run) => run.status === 'completed');
+            }
+            
+            console.log(`Waiting for checks to complete for PR #${prNumber}...`);
+            
             let attempt = 0;
-            
             while (attempt < maxAttempts) {
-              attempt++;
+              attempt += 1;
               console.log(`Check polling attempt ${attempt}/${maxAttempts}...`);
               
-              // Get check runs for this commit
-              const { data: checkRuns } = await github.rest.checks.listForRef({
+              // Get latest PR data to obtain the current head SHA
+              const { data: pr } = await github.rest.pulls.get({
+                owner,
+                repo,
+                pull_number: prNumber,
+              });
+              
+              const headSha = pr.head && pr.head.sha;
+              if (!headSha) {
+                console.log('Unable to determine head SHA, waiting before retrying...');
+                await delay(intervalMs);
+                continue;
+              }
+              
+              // Combined status for the ref (includes legacy statuses)
+              const combinedStatus = await github.rest.repos.getCombinedStatusForRef({
                 owner,
                 repo,
                 ref: headSha,
-                per_page: 100
               });
               
-              // Get commit status (older API)
-              const { data: commitStatus } = await github.rest.repos.getCombinedStatusForRef({
-                owner,
-                repo,
-                ref: headSha
-              });
+              const state = combinedStatus.data.state; // success, failure, pending, error
+              console.log(`Combined status for ${headSha}: ${state}`);
               
-              const allCheckRuns = checkRuns.check_runs || [];
-              const allStatuses = commitStatus.statuses || [];
-              
-              console.log(`Found ${allCheckRuns.length} check runs, ${allStatuses.length} commit statuses`);
-              
-              // Check if any checks are still pending
-              const pendingCheckRuns = allCheckRuns.filter(run => 
-                run.status !== 'completed'
-              );
-              
-              const pendingStatuses = allStatuses.filter(status =>
-                status.state === 'pending'
-              );
-              
-              console.log(`Pending: ${pendingCheckRuns.length} check runs, ${pendingStatuses.length} statuses`);
-              
-              // Check for failures
-              const failedCheckRuns = allCheckRuns.filter(run =>
-                run.status === 'completed' && 
-                run.conclusion && 
-                ['failure', 'cancelled', 'timed_out', 'action_required'].includes(run.conclusion)
-              );
-              
-              const failedStatuses = allStatuses.filter(status =>
-                ['failure', 'error'].includes(status.state)
-              );
-              
-              if (failedCheckRuns.length > 0 || failedStatuses.length > 0) {
-                console.log('⚠️ Some checks have failed');
-                failedCheckRuns.forEach(run => console.log(`  - ${run.name}: ${run.conclusion}`));
-                failedStatuses.forEach(status => console.log(`  - ${status.context}: ${status.state}`));
-                // Continue anyway - the approval step will handle failures
+              // Check runs API (more granular)
+              let checkRuns = [];
+              try {
+                const checksResponse = await github.rest.checks.listForRef({
+                  owner,
+                  repo,
+                  ref: headSha,
+                });
+                checkRuns = checksResponse.data.check_runs || [];
+                console.log(`Found ${checkRuns.length} check runs for ${headSha}.`);
+              } catch (e) {
+                console.log(`Checks API not available or error: ${e.message}`);
               }
               
-              // If no pending checks, we're done
-              if (pendingCheckRuns.length === 0 && pendingStatuses.length === 0) {
-                console.log('✅ All checks completed');
-                break;
+              const hasFailingChecks = checksIndicateFailure(checkRuns) || state === 'failure' || state === 'error';
+              if (hasFailingChecks) {
+                core.setFailed(`One or more required checks have failed for PR #${prNumber}.`);
+                return;
               }
               
-              // Wait before next poll
-              if (attempt < maxAttempts) {
-                console.log(`Waiting ${pollIntervalMs/1000}s before next check...`);
-                await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+              const checksCompleted =
+                (checkRuns.length > 0 && allChecksCompleted(checkRuns) && (state === 'success' || state === 'pending')) ||
+                (checkRuns.length === 0 && (state === 'success' || state === 'pending'));
+              
+              if (checksCompleted) {
+                console.log('✓ All checks have completed successfully. Proceeding to merge step.');
+                return;
               }
+              
+              if (attempt >= maxAttempts) {
+                core.setFailed(`Timed out waiting for checks to complete for PR #${prNumber}.`);
+                return;
+              }
+              
+              console.log(`Checks not yet complete; waiting ${intervalMs / 1000}s before next poll...`);
+              await delay(intervalMs);
             }
             
-            if (attempt >= maxAttempts) {
-              console.log('⏱️ Timeout reached - proceeding with current check status');
-            }
-            
-            console.log('Check polling complete');
+            core.setFailed(`Timed out waiting for checks to complete for PR #${prNumber}.`);
 
       - name: Merge Pull Request
         id: merge
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -418,7 +418,7 @@ jobs:
 
       - name: Close Related Issue
         if: steps.merge.outputs.merged == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -458,7 +458,7 @@ jobs:
 
       - name: Cleanup Branch
         if: steps.merge.outputs.merged == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -503,11 +503,24 @@ jobs:
           
           EOF
           
-          echo "Archive complete"
+          # Commit archive documentation to repository
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          git add ".github/archived-resolutions/pr-${PR_NUMBER}.md"
+          
+          # Commit only if there are staged changes
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: archive auto-merged PR #${PR_NUMBER}"
+            git push
+            echo "✓ Archive documentation committed and pushed"
+          else
+            echo "No changes to commit for archive documentation"
+          fi
 
       - name: Post-Merge Notification
         if: steps.merge.outputs.merged == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

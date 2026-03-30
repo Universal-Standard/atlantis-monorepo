@@ -18,11 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check System Health
         id: health-check
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -106,14 +106,16 @@ jobs:
 
       - name: Heal Stuck PRs
         if: steps.health-check.outputs.needs_healing == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
+        env:
+          ISSUES_FOUND: ${{ steps.health-check.outputs.issues_found }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issues = JSON.parse('${{ steps.health-check.outputs.issues_found }}');
+            const issues = JSON.parse(process.env.ISSUES_FOUND || '{"workflow_failures":[],"stuck_prs":[],"stale_issues":[]}');
             
             // Retry stuck PRs
-            for (const pr of issues.stuck_prs) {
+            for (const pr of (issues.stuck_prs || [])) {
               console.log(`Healing stuck PR #${pr.number}`);
               
               await github.rest.issues.createComment({
@@ -129,7 +131,7 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   workflow_id: 'auto-review-and-merge.yml',
-                  ref: 'main',
+                  ref: context.ref.replace('refs/heads/', ''),
                   inputs: {
                     pr_number: pr.number.toString()
                   }
@@ -141,14 +143,16 @@ jobs:
 
       - name: Heal Stale Issues
         if: steps.health-check.outputs.needs_healing == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
+        env:
+          ISSUES_FOUND: ${{ steps.health-check.outputs.issues_found }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issues = JSON.parse('${{ steps.health-check.outputs.issues_found }}');
+            const issues = JSON.parse(process.env.ISSUES_FOUND || '{"workflow_failures":[],"stuck_prs":[],"stale_issues":[]}');
             
             // Retry stale issues
-            for (const issue of issues.stale_issues) {
+            for (const issue of (issues.stale_issues || [])) {
               console.log(`Healing stale issue #${issue.number}`);
               
               await github.rest.issues.createComment({
@@ -164,7 +168,7 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   workflow_id: 'auto-issue-resolver.yml',
-                  ref: 'main',
+                  ref: context.ref.replace('refs/heads/', ''),
                   inputs: {
                     issue_number: issue.number.toString()
                   }
@@ -176,13 +180,15 @@ jobs:
 
       - name: Report Failed Workflows
         if: steps.health-check.outputs.needs_healing == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
+        env:
+          ISSUES_FOUND: ${{ steps.health-check.outputs.issues_found }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issues = JSON.parse('${{ steps.health-check.outputs.issues_found }}');
+            const issues = JSON.parse(process.env.ISSUES_FOUND || '{"workflow_failures":[],"stuck_prs":[],"stale_issues":[]}');
             
-            if (issues.workflow_failures.length > 0) {
+            if ((issues.workflow_failures || []).length > 0) {
               console.log('Workflow failures detected:', issues.workflow_failures.length);
               
               // Create issue for workflow failures if serious
@@ -218,11 +224,13 @@ jobs:
 
       - name: Health Report
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
+        env:
+          NEEDS_HEALING: ${{ steps.health-check.outputs.needs_healing }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const needsHealing = '${{ steps.health-check.outputs.needs_healing }}' === 'true';
+            const needsHealing = process.env.NEEDS_HEALING === 'true';
             
             if (!needsHealing) {
               console.log('✅ System health check passed - all systems operational');

@@ -25,13 +25,13 @@ jobs:
       (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'auto-detected'))
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Get Issue Details
         id: issue-details
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -78,12 +78,15 @@ jobs:
 
       - name: Analyze Issue and Generate Solution
         id: generate-solution
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
+        env:
+          ISSUE_TITLE: ${{ steps.issue-details.outputs.issue_title }}
+          ISSUE_BODY: ${{ steps.issue-details.outputs.issue_body }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issueTitle = `${{ steps.issue-details.outputs.issue_title }}`;
-            const issueBody = `${{ steps.issue-details.outputs.issue_body }}`;
+            const issueTitle = process.env.ISSUE_TITLE || '';
+            const issueBody = process.env.ISSUE_BODY || '';
             
             // Generate solution based on issue type (case-insensitive regex matching)
             let solution = '';
@@ -119,7 +122,7 @@ jobs:
               solution = 'Create SECURITY.md with security policy';
               files.push({
                 path: 'SECURITY.md',
-                content: `# Security Policy\n\n## Supported Versions\n\nWe release patches for security vulnerabilities. Currently supported versions:\n\n| Version | Supported          |\n| ------- | ------------------ |\n| latest  | :white_check_mark: |\n\n## Reporting a Vulnerability\n\nIf you discover a security vulnerability, please use GitHub's "Security" tab to report it privately, or contact the repository maintainers.\n\n**Important:** Replace this section with a real security contact method for your organization.\n\nAll security vulnerabilities will be promptly addressed.\n\nPlease include:\n- Description of the vulnerability\n- Steps to reproduce\n- Potential impact\n- Suggested fix (if any)\n\n## Automated Security\n\nThis repository uses:\n- CodeQL for automated security scanning\n- Dependabot for dependency updates\n- Automated security issue detection and resolution\n\nThank you for helping keep ATLANTIS AI secure!\n`
+                content: `# Security Policy\n\n## Supported Versions\n\nThe following versions of the ATLANTIS monorepo are currently supported with security updates:\n\n| Version | Supported          |\n| ------- | ------------------ |\n| main    | :white_check_mark: |\n\n## Reporting a Vulnerability\n\nWe take security vulnerabilities seriously. If you discover a security issue in this repository, please follow these steps:\n\n### Private Disclosure\n\n**Do not** report security vulnerabilities through public GitHub issues. Instead, please use the following method:\n\n1. **GitHub Security Advisories**: Use the [Report a Vulnerability](../../security/advisories/new) button on the Security tab of this repository to submit a private security report.\n\n### What to Include\n\nWhen reporting a vulnerability, please provide as much of the following information as possible:\n\n- A description of the vulnerability and its potential impact\n- The affected component(s) or workflow(s)\n- Steps to reproduce the issue\n- Any potential mitigations you have identified\n- Your contact information for follow-up questions\n\n### Response Timeline\n\n- **Acknowledgement**: We will acknowledge receipt of your report within **48 hours**.\n- **Assessment**: We will assess the severity and impact within **7 days**.\n- **Resolution**: We aim to resolve confirmed vulnerabilities within **30 days**, depending on complexity.\n- **Disclosure**: We will coordinate public disclosure with you once a fix is available.\n\n## Security Practices\n\n### Automated Security Scanning\n\nThis repository uses several automated security measures:\n\n- **CodeQL Analysis**: Automated code scanning to detect common vulnerabilities.\n- **Dependabot**: Automated dependency updates to address known vulnerabilities in dependencies.\n- **Secret Detection**: Automated scanning to prevent accidental exposure of credentials or secrets in commits.\n\n### Workflow Security\n\nAll GitHub Actions workflows in this repository follow security best practices:\n\n- Workflow permissions are explicitly scoped at the workflow level rather than relying on default token permissions.\n- Third-party actions are pinned to specific version tags.\n- Secrets are managed through GitHub Encrypted Secrets and never hardcoded.\n\n## Security Updates\n\nSecurity patches and updates will be applied to the \`main\` branch. Users are encouraged to keep their forks and deployments up to date with the latest changes from \`main\`.\n\n## Responsible Disclosure\n\nWe are committed to working with security researchers in good faith. We ask that you:\n\n- Give us reasonable time to address the issue before any public disclosure.\n- Avoid accessing, modifying, or deleting data that does not belong to you.\n- Act in good faith and avoid disrupting the availability of our systems.\n\nWe appreciate the efforts of the security community and will acknowledge contributors who responsibly disclose vulnerabilities (with their permission).\n`
               });
             }
             
@@ -143,14 +146,46 @@ jobs:
           fi
           
           # Use process substitution instead of pipe to avoid subshell
+          # Validate FILES JSON
+          if [ -z "$FILES" ]; then
+            echo "❌ No files JSON provided in generate-solution output (FILES is empty)." >&2
+            exit 1
+          fi
+          
+          if ! echo "$FILES" | jq -e . >/dev/null 2>&1; then
+            echo "❌ Invalid JSON in FILES variable. Aborting file creation." >&2
+            exit 1
+          fi
+          
+          FILE_COUNT=$(echo "$FILES" | jq 'length')
+          if [ "$FILE_COUNT" -eq 0 ]; then
+            echo "⚠️ FILES JSON is valid but contains no entries. Nothing to create." >&2
+            exit 1
+          fi
+          
+          echo "Creating $FILE_COUNT file(s)..."
+          
+          # Iterate over files with proper error handling
           while IFS= read -r file; do
             FILE_PATH=$(echo "$file" | jq -r '.path')
             FILE_CONTENT=$(echo "$file" | jq -r '.content')
             
-            echo "$FILE_CONTENT" > "$FILE_PATH"
-            git add "$FILE_PATH"
+            if [ -z "$FILE_PATH" ] || [ "$FILE_PATH" = "null" ]; then
+              echo "❌ Encountered file entry with missing or null path. Aborting." >&2
+              exit 1
+            fi
             
-            echo "Created file: $FILE_PATH"
+            # Create parent directory if needed
+            mkdir -p "$(dirname "$FILE_PATH")"
+            
+            # Create/write file and handle errors
+            if ! echo "$FILE_CONTENT" > "$FILE_PATH"; then
+              echo "❌ Failed to create or write file: $FILE_PATH" >&2
+              exit 1
+            fi
+            
+            git add "$FILE_PATH"
+            echo "✓ Created file: $FILE_PATH"
           done < <(echo "$FILES" | jq -c '.[]')
           
           # Commit changes
@@ -167,13 +202,15 @@ jobs:
 
       - name: Create Pull Request
         id: create-pr
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
+        env:
+          SOLUTION: ${{ steps.generate-solution.outputs.solution }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const issueNumber = ${{ steps.issue-details.outputs.issue_number }};
             const branchName = '${{ steps.create-branch.outputs.branch_name }}';
-            const solution = `${{ steps.generate-solution.outputs.solution }}`;
+            const solution = process.env.SOLUTION || '';
             
             // Check if PR already exists
             const existingPRs = await github.rest.pulls.list({
@@ -194,7 +231,7 @@ jobs:
               repo: context.repo.repo,
               title: `🤖 Auto-fix: ${solution}`,
               head: branchName,
-              base: 'main',
+              base: context.ref.replace('refs/heads/', ''),
               body: `## Automated Fix\n\nThis PR was automatically generated to resolve issue #${issueNumber}.\n\n**Solution:** ${solution}\n\n### Changes Made\n- Automated analysis of the issue\n- Generated appropriate solution\n- Applied fix with best practices\n- Ready for automated review and merge\n\n### Automated Workflow\n✅ Issue detected and analyzed\n✅ Solution generated\n✅ Changes applied\n⏳ Awaiting automated review\n⏳ Pending automated merge\n\nFixes #${issueNumber}`,
               maintainer_can_modify: true
             });
@@ -211,7 +248,7 @@ jobs:
             return pr.data.number;
 
       - name: Update Issue Status
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -234,7 +271,7 @@ jobs:
             });
 
       - name: Trigger Auto Review
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -245,7 +282,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'auto-review-and-merge.yml',
-              ref: 'main',
+              ref: context.ref.replace('refs/heads/', ''),
               inputs: {
                 pr_number: prNumber.toString()
               }

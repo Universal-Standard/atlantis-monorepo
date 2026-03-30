@@ -24,11 +24,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: System Status Check
         id: status
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -81,7 +81,7 @@ jobs:
 
       - name: Trigger Issue Detection
         if: github.event.inputs.force_scan == 'true' || github.event_name == 'schedule'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -93,7 +93,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 workflow_id: 'auto-issue-detector.yml',
-                ref: 'main'
+                ref: context.ref.replace('refs/heads/', '')
               });
               console.log('✅ Issue detection triggered');
             } catch (error) {
@@ -101,13 +101,15 @@ jobs:
             }
 
       - name: Process Pending Items
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
+        env:
+          SYSTEM_STATUS: ${{ steps.status.outputs.status }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const status = JSON.parse('${{ steps.status.outputs.status }}');
+            const status = JSON.parse(process.env.SYSTEM_STATUS || '{"open_issues":0,"open_prs":0,"pending_reviews":0,"ready_to_merge":0}');
             
-            if (status.open_issues === 0 && status.open_prs === 0) {
+            if ((status.open_issues ?? 0) === 0 && (status.open_prs ?? 0) === 0) {
               console.log('✅ No pending items - system idle');
               return;
             }
@@ -140,7 +142,7 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   workflow_id: 'auto-issue-resolver.yml',
-                  ref: 'main',
+                  ref: context.ref.replace('refs/heads/', ''),
                   inputs: {
                     issue_number: issue.number.toString()
                   }
@@ -170,7 +172,7 @@ jobs:
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     workflow_id: 'auto-review-and-merge.yml',
-                    ref: 'main',
+                    ref: context.ref.replace('refs/heads/', ''),
                     inputs: {
                       pr_number: pr.number.toString()
                     }
@@ -183,11 +185,13 @@ jobs:
             }
 
       - name: Orchestration Summary
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
+        env:
+          SYSTEM_STATUS: ${{ steps.status.outputs.status }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const status = JSON.parse('${{ steps.status.outputs.status }}');
+            const status = JSON.parse(process.env.SYSTEM_STATUS || '{"open_issues":0,"open_prs":0,"pending_reviews":0,"ready_to_merge":0}');
             
             console.log('\n' + '═'.repeat(60));
             console.log('🤖 ATLANTIS Orchestration Complete');
