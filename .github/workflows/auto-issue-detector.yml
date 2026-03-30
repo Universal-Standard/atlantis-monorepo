@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - main
+      - 'copilot/**'
 
 permissions:
   contents: write
@@ -34,7 +35,7 @@ jobs:
         uses: github/codeql-action/analyze@v4
         continue-on-error: true
         with:
-          category: "/language:multiple"
+          category: "auto-detection"
 
       - name: Check for Missing Files
         id: missing-files-check
@@ -124,7 +125,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 workflow_id: 'auto-issue-resolver.yml',
-                ref: 'main',
+                ref: context.ref.replace('refs/heads/', ''),
                 inputs: {
                   issue_number: newIssue.data.number.toString()
                 }
