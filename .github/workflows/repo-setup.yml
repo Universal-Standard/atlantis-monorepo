@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure Repository Settings
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -45,7 +45,7 @@ jobs:
             }
 
       - name: Enable Automated Security Fixes
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -63,7 +63,7 @@ jobs:
             }
 
       - name: Enable Vulnerability Alerts
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -81,7 +81,7 @@ jobs:
             }
 
       - name: Setup Labels
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -151,7 +151,7 @@ jobs:
           echo "✅ Initial documentation created"
 
       - name: Setup Complete
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
